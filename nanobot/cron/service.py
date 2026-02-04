@@ -1,4 +1,4 @@
-"""Cron service for scheduling agent tasks."""
+"""用于调度 Agent 任务的 Cron 服务。"""
 
 import asyncio
 import json
@@ -17,7 +17,7 @@ def _now_ms() -> int:
 
 
 def _compute_next_run(schedule: CronSchedule, now_ms: int) -> int | None:
-    """Compute next run time in ms."""
+    """计算下次运行时间（毫秒）。"""
     if schedule.kind == "at":
         return schedule.at_ms if schedule.at_ms and schedule.at_ms > now_ms else None
     
@@ -40,7 +40,7 @@ def _compute_next_run(schedule: CronSchedule, now_ms: int) -> int | None:
 
 
 class CronService:
-    """Service for managing and executing scheduled jobs."""
+    """用于管理和执行计划任务的服务。"""
     
     def __init__(
         self,
@@ -48,13 +48,13 @@ class CronService:
         on_job: Callable[[CronJob], Coroutine[Any, Any, str | None]] | None = None
     ):
         self.store_path = store_path
-        self.on_job = on_job  # Callback to execute job, returns response text
+        self.on_job = on_job  # 执行任务的回调，返回响应文本
         self._store: CronStore | None = None
         self._timer_task: asyncio.Task | None = None
         self._running = False
     
     def _load_store(self) -> CronStore:
-        """Load jobs from disk."""
+        """从磁盘加载任务。"""
         if self._store:
             return self._store
         
@@ -93,7 +93,7 @@ class CronService:
                     ))
                 self._store = CronStore(jobs=jobs)
             except Exception as e:
-                logger.warning(f"Failed to load cron store: {e}")
+                logger.warning(f"加载 cron 存储失败：{e}")
                 self._store = CronStore()
         else:
             self._store = CronStore()
@@ -101,7 +101,7 @@ class CronService:
         return self._store
     
     def _save_store(self) -> None:
-        """Save jobs to disk."""
+        """将任务保存到磁盘。"""
         if not self._store:
             return
         
@@ -145,23 +145,23 @@ class CronService:
         self.store_path.write_text(json.dumps(data, indent=2))
     
     async def start(self) -> None:
-        """Start the cron service."""
+        """启动 Cron 服务。"""
         self._running = True
         self._load_store()
         self._recompute_next_runs()
         self._save_store()
         self._arm_timer()
-        logger.info(f"Cron service started with {len(self._store.jobs if self._store else [])} jobs")
-    
+        logger.info(f"Cron 服务已启动，包含 {len(self._store.jobs if self._store else [])} 个任务")
+
     def stop(self) -> None:
-        """Stop the cron service."""
+        """停止 Cron 服务。"""
         self._running = False
         if self._timer_task:
             self._timer_task.cancel()
             self._timer_task = None
     
     def _recompute_next_runs(self) -> None:
-        """Recompute next run times for all enabled jobs."""
+        """重新计算所有已启用任务的下次运行时间。"""
         if not self._store:
             return
         now = _now_ms()
@@ -170,7 +170,7 @@ class CronService:
                 job.state.next_run_at_ms = _compute_next_run(job.schedule, now)
     
     def _get_next_wake_ms(self) -> int | None:
-        """Get the earliest next run time across all jobs."""
+        """获取所有任务中最早的下次运行时间。"""
         if not self._store:
             return None
         times = [j.state.next_run_at_ms for j in self._store.jobs 
@@ -178,7 +178,7 @@ class CronService:
         return min(times) if times else None
     
     def _arm_timer(self) -> None:
-        """Schedule the next timer tick."""
+        """安排下一次计时器触发。"""
         if self._timer_task:
             self._timer_task.cancel()
         
@@ -197,7 +197,7 @@ class CronService:
         self._timer_task = asyncio.create_task(tick())
     
     async def _on_timer(self) -> None:
-        """Handle timer tick - run due jobs."""
+        """处理计时器触发 - 运行到期任务。"""
         if not self._store:
             return
         
@@ -214,9 +214,9 @@ class CronService:
         self._arm_timer()
     
     async def _execute_job(self, job: CronJob) -> None:
-        """Execute a single job."""
+        """执行单个任务。"""
         start_ms = _now_ms()
-        logger.info(f"Cron: executing job '{job.name}' ({job.id})")
+        logger.info(f"Cron：正在执行任务 '{job.name}' ({job.id})")
         
         try:
             response = None
@@ -225,12 +225,12 @@ class CronService:
             
             job.state.last_status = "ok"
             job.state.last_error = None
-            logger.info(f"Cron: job '{job.name}' completed")
-            
+            logger.info(f"Cron：任务 '{job.name}' 已完成")
+
         except Exception as e:
             job.state.last_status = "error"
             job.state.last_error = str(e)
-            logger.error(f"Cron: job '{job.name}' failed: {e}")
+            logger.error(f"Cron：任务 '{job.name}' 失败：{e}")
         
         job.state.last_run_at_ms = start_ms
         job.updated_at_ms = _now_ms()
@@ -249,7 +249,7 @@ class CronService:
     # ========== Public API ==========
     
     def list_jobs(self, include_disabled: bool = False) -> list[CronJob]:
-        """List all jobs."""
+        """列出所有任务。"""
         store = self._load_store()
         jobs = store.jobs if include_disabled else [j for j in store.jobs if j.enabled]
         return sorted(jobs, key=lambda j: j.state.next_run_at_ms or float('inf'))
@@ -264,7 +264,7 @@ class CronService:
         to: str | None = None,
         delete_after_run: bool = False,
     ) -> CronJob:
-        """Add a new job."""
+        """添加新任务。"""
         store = self._load_store()
         now = _now_ms()
         
@@ -290,11 +290,11 @@ class CronService:
         self._save_store()
         self._arm_timer()
         
-        logger.info(f"Cron: added job '{name}' ({job.id})")
+        logger.info(f"Cron：已添加任务 '{name}' ({job.id})")
         return job
-    
+
     def remove_job(self, job_id: str) -> bool:
-        """Remove a job by ID."""
+        """按 ID 移除任务。"""
         store = self._load_store()
         before = len(store.jobs)
         store.jobs = [j for j in store.jobs if j.id != job_id]
@@ -303,12 +303,12 @@ class CronService:
         if removed:
             self._save_store()
             self._arm_timer()
-            logger.info(f"Cron: removed job {job_id}")
+            logger.info(f"Cron：已移除任务 {job_id}")
         
         return removed
     
     def enable_job(self, job_id: str, enabled: bool = True) -> CronJob | None:
-        """Enable or disable a job."""
+        """启用或禁用任务。"""
         store = self._load_store()
         for job in store.jobs:
             if job.id == job_id:
@@ -324,7 +324,7 @@ class CronService:
         return None
     
     async def run_job(self, job_id: str, force: bool = False) -> bool:
-        """Manually run a job."""
+        """手动运行任务。"""
         store = self._load_store()
         for job in store.jobs:
             if job.id == job_id:
@@ -337,7 +337,7 @@ class CronService:
         return False
     
     def status(self) -> dict:
-        """Get service status."""
+        """获取服务状态。"""
         store = self._load_store()
         return {
             "enabled": self._running,

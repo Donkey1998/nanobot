@@ -1,4 +1,4 @@
-"""Context builder for assembling agent prompts."""
+"""用于组装 Agent 提示的上下文构建器。"""
 
 import base64
 import mimetypes
@@ -11,10 +11,10 @@ from nanobot.agent.skills import SkillsLoader
 
 class ContextBuilder:
     """
-    Builds the context (system prompt + messages) for the agent.
-    
-    Assembles bootstrap files, memory, skills, and conversation history
-    into a coherent prompt for the LLM.
+    为 Agent 构建上下文（系统提示 + 消息）。
+
+    将引导文件、记忆、技能和对话历史
+    组装成给 LLM 的连贯提示。
     """
     
     BOOTSTRAP_FILES = ["AGENTS.md", "SOUL.md", "USER.md", "TOOLS.md", "IDENTITY.md"]
@@ -26,13 +26,13 @@ class ContextBuilder:
     
     def build_system_prompt(self, skill_names: list[str] | None = None) -> str:
         """
-        Build the system prompt from bootstrap files, memory, and skills.
-        
+        从引导文件、记忆和技能构建系统提示。
+
         Args:
-            skill_names: Optional list of skills to include.
-        
+            skill_names: 要包含的可选技能列表。
+
         Returns:
-            Complete system prompt.
+            完整的系统提示。
         """
         parts = []
         
@@ -62,46 +62,46 @@ class ContextBuilder:
         if skills_summary:
             parts.append(f"""# Skills
 
-The following skills extend your capabilities. To use a skill, read its SKILL.md file using the read_file tool.
-Skills with available="false" need dependencies installed first - you can try installing them with apt/brew.
+以下技能扩展了你的能力。要使用技能，请使用 read_file 工具读取其 SKILL.md 文件。
+available="false" 的技能需要先安装依赖项 - 你可以尝试使用 apt/brew 安装它们。
 
 {skills_summary}""")
         
         return "\n\n---\n\n".join(parts)
     
     def _get_identity(self) -> str:
-        """Get the core identity section."""
+        """获取核心身份部分。"""
         from datetime import datetime
         now = datetime.now().strftime("%Y-%m-%d %H:%M (%A)")
         workspace_path = str(self.workspace.expanduser().resolve())
         
         return f"""# nanobot 🐈
 
-You are nanobot, a helpful AI assistant. You have access to tools that allow you to:
-- Read, write, and edit files
-- Execute shell commands
-- Search the web and fetch web pages
-- Send messages to users on chat channels
-- Spawn subagents for complex background tasks
+你是 nanobot，一个有用的 AI 助手。你可以使用以下工具：
+- 读取、写入和编辑文件
+- 执行 Shell 命令
+- 搜索网络和获取网页
+- 向聊天渠道的用户发送消息
+- 为复杂的后台任务生成子 Agent
 
-## Current Time
+## 当前时间
 {now}
 
-## Workspace
-Your workspace is at: {workspace_path}
-- Memory files: {workspace_path}/memory/MEMORY.md
-- Daily notes: {workspace_path}/memory/YYYY-MM-DD.md
-- Custom skills: {workspace_path}/skills/{{skill-name}}/SKILL.md
+## 工作区
+你的工作区位于：{workspace_path}
+- 记忆文件：{workspace_path}/memory/MEMORY.md
+- 每日笔记：{workspace_path}/memory/YYYY-MM-DD.md
+- 自定义技能：{workspace_path}/skills/{{skill-name}}/SKILL.md
 
-IMPORTANT: When responding to direct questions or conversations, reply directly with your text response.
-Only use the 'message' tool when you need to send a message to a specific chat channel (like WhatsApp).
-For normal conversation, just respond with text - do not call the message tool.
+重要提示：当响应直接问题或对话时，直接用你的文本响应。
+仅当需要向特定聊天渠道（如 WhatsApp）发送消息时，才使用 'message' 工具。
+对于正常对话，只需用文本响应 - 不要调用 message 工具。
 
-Always be helpful, accurate, and concise. When using tools, explain what you're doing.
-When remembering something, write to {workspace_path}/memory/MEMORY.md"""
+始终保持有用、准确和简洁。使用工具时，解释你在做什么。
+记住某些内容时，请写入 {workspace_path}/memory/MEMORY.md"""
     
     def _load_bootstrap_files(self) -> str:
-        """Load all bootstrap files from workspace."""
+        """从工作区加载所有引导文件。"""
         parts = []
         
         for filename in self.BOOTSTRAP_FILES:
@@ -120,16 +120,16 @@ When remembering something, write to {workspace_path}/memory/MEMORY.md"""
         media: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """
-        Build the complete message list for an LLM call.
+        为 LLM 调用构建完整的消息列表。
 
         Args:
-            history: Previous conversation messages.
-            current_message: The new user message.
-            skill_names: Optional skills to include.
-            media: Optional list of local file paths for images/media.
+            history: 之前的对话消息。
+            current_message: 新的用户消息。
+            skill_names: 要包含的可选技能。
+            media: 图像/媒体的本地文件路径的可选列表。
 
         Returns:
-            List of messages including system prompt.
+            包括系统提示的消息列表。
         """
         messages = []
 
@@ -147,7 +147,7 @@ When remembering something, write to {workspace_path}/memory/MEMORY.md"""
         return messages
 
     def _build_user_content(self, text: str, media: list[str] | None) -> str | list[dict[str, Any]]:
-        """Build user message content with optional base64-encoded images."""
+        """构建用户消息内容，可包含 base64 编码的图像。"""
         if not media:
             return text
         
@@ -172,16 +172,16 @@ When remembering something, write to {workspace_path}/memory/MEMORY.md"""
         result: str
     ) -> list[dict[str, Any]]:
         """
-        Add a tool result to the message list.
-        
+        将工具结果添加到消息列表。
+
         Args:
-            messages: Current message list.
-            tool_call_id: ID of the tool call.
-            tool_name: Name of the tool.
-            result: Tool execution result.
-        
+            messages: 当前消息列表。
+            tool_call_id: 工具调用的 ID。
+            tool_name: 工具名称。
+            result: 工具执行结果。
+
         Returns:
-            Updated message list.
+            更新后的消息列表。
         """
         messages.append({
             "role": "tool",
@@ -198,15 +198,15 @@ When remembering something, write to {workspace_path}/memory/MEMORY.md"""
         tool_calls: list[dict[str, Any]] | None = None
     ) -> list[dict[str, Any]]:
         """
-        Add an assistant message to the message list.
-        
+        将助手消息添加到消息列表。
+
         Args:
-            messages: Current message list.
-            content: Message content.
-            tool_calls: Optional tool calls.
-        
+            messages: 当前消息列表。
+            content: 消息内容。
+            tool_calls: 可选的工具调用。
+
         Returns:
-            Updated message list.
+            更新后的消息列表。
         """
         msg: dict[str, Any] = {"role": "assistant", "content": content or ""}
         

@@ -1,4 +1,4 @@
-"""Spawn tool for creating background subagents."""
+"""用于创建后台子 Agent 的生成工具。"""
 
 from typing import Any, TYPE_CHECKING
 
@@ -10,10 +10,10 @@ if TYPE_CHECKING:
 
 class SpawnTool(Tool):
     """
-    Tool to spawn a subagent for background task execution.
-    
-    The subagent runs asynchronously and announces its result back
-    to the main agent when complete.
+    生成子 Agent 以执行后台任务的工具。
+
+    子 Agent 异步运行，并在完成时将其结果
+    通知回主 Agent。
     """
     
     def __init__(self, manager: "SubagentManager"):
@@ -22,7 +22,7 @@ class SpawnTool(Tool):
         self._origin_chat_id = "direct"
     
     def set_context(self, channel: str, chat_id: str) -> None:
-        """Set the origin context for subagent announcements."""
+        """设置子 Agent 通知的原始上下文。"""
         self._origin_channel = channel
         self._origin_chat_id = chat_id
     
@@ -33,9 +33,9 @@ class SpawnTool(Tool):
     @property
     def description(self) -> str:
         return (
-            "Spawn a subagent to handle a task in the background. "
-            "Use this for complex or time-consuming tasks that can run independently. "
-            "The subagent will complete the task and report back when done."
+            "生成一个子 Agent 在后台处理任务。"
+            "用于可以独立运行的复杂或耗时任务。"
+            "子 Agent 将完成任务并在完成时报告。"
         )
     
     @property
@@ -45,18 +45,18 @@ class SpawnTool(Tool):
             "properties": {
                 "task": {
                     "type": "string",
-                    "description": "The task for the subagent to complete",
+                    "description": "子 Agent 要完成的任务",
                 },
                 "label": {
                     "type": "string",
-                    "description": "Optional short label for the task (for display)",
+                    "description": "任务的可选简短标签（用于显示）",
                 },
             },
             "required": ["task"],
         }
     
     async def execute(self, task: str, label: str | None = None, **kwargs: Any) -> str:
-        """Spawn a subagent to execute the given task."""
+        """生成一个子 Agent 来执行给定任务。"""
         return await self._manager.spawn(
             task=task,
             label=label,

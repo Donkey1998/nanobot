@@ -1,4 +1,4 @@
-"""Subagent manager for background task execution."""
+"""用于后台任务执行的子 Agent 管理器。"""
 
 import asyncio
 import json
@@ -19,11 +19,11 @@ from nanobot.agent.tools.web import WebSearchTool, WebFetchTool
 
 class SubagentManager:
     """
-    Manages background subagent execution.
-    
-    Subagents are lightweight agent instances that run in the background
-    to handle specific tasks. They share the same LLM provider but have
-    isolated context and a focused system prompt.
+    管理后台子 Agent 的执行。
+
+    子 Agent 是在后台运行的轻量级 Agent 实例，
+    用于处理特定任务。它们共享相同的 LLM 提供商，
+    但拥有隔离的上下文和专注的系统提示。
     """
     
     def __init__(
@@ -49,16 +49,16 @@ class SubagentManager:
         origin_chat_id: str = "direct",
     ) -> str:
         """
-        Spawn a subagent to execute a task in the background.
-        
+        生成子 Agent 在后台执行任务。
+
         Args:
-            task: The task description for the subagent.
-            label: Optional human-readable label for the task.
-            origin_channel: The channel to announce results to.
-            origin_chat_id: The chat ID to announce results to.
-        
+            task: 子 Agent 的任务描述。
+            label: 任务的可读标签。
+            origin_channel: 用于公布结果的渠道。
+            origin_chat_id: 用于公布结果的聊天 ID。
+
         Returns:
-            Status message indicating the subagent was started.
+            表示子 Agent 已启动的状态消息。
         """
         task_id = str(uuid.uuid4())[:8]
         display_label = label or task[:30] + ("..." if len(task) > 30 else "")
@@ -77,8 +77,8 @@ class SubagentManager:
         # Cleanup when done
         bg_task.add_done_callback(lambda _: self._running_tasks.pop(task_id, None))
         
-        logger.info(f"Spawned subagent [{task_id}]: {display_label}")
-        return f"Subagent [{display_label}] started (id: {task_id}). I'll notify you when it completes."
+        logger.info(f"已生成子 Agent [{task_id}]: {display_label}")
+        return f"子 Agent [{display_label}] 已启动（id: {task_id}）。完成后我会通知你。"
     
     async def _run_subagent(
         self,
@@ -87,8 +87,8 @@ class SubagentManager:
         label: str,
         origin: dict[str, str],
     ) -> None:
-        """Execute the subagent task and announce the result."""
-        logger.info(f"Subagent [{task_id}] starting task: {label}")
+        """执行子 Agent 任务并公布结果。"""
+        logger.info(f"子 Agent [{task_id}] 正在启动任务：{label}")
         
         try:
             # Build subagent tools (no message tool, no spawn tool)
@@ -155,14 +155,14 @@ class SubagentManager:
                     break
             
             if final_result is None:
-                final_result = "Task completed but no final response was generated."
-            
-            logger.info(f"Subagent [{task_id}] completed successfully")
+                final_result = "任务已完成，但未生成最终响应。"
+
+            logger.info(f"子 Agent [{task_id}] 已成功完成")
             await self._announce_result(task_id, label, task, final_result, origin, "ok")
             
         except Exception as e:
-            error_msg = f"Error: {str(e)}"
-            logger.error(f"Subagent [{task_id}] failed: {e}")
+            error_msg = f"错误：{str(e)}"
+            logger.error(f"子 Agent [{task_id}] 失败：{e}")
             await self._announce_result(task_id, label, task, error_msg, origin, "error")
     
     async def _announce_result(
@@ -174,17 +174,17 @@ class SubagentManager:
         origin: dict[str, str],
         status: str,
     ) -> None:
-        """Announce the subagent result to the main agent via the message bus."""
-        status_text = "completed successfully" if status == "ok" else "failed"
+        """通过消息总线向主 Agent 公布子 Agent 的结果。"""
+        status_text = "成功完成" if status == "ok" else "失败"
         
-        announce_content = f"""[Subagent '{label}' {status_text}]
+        announce_content = f"""[子 Agent '{label}' {status_text}]
 
-Task: {task}
+任务：{task}
 
-Result:
+结果：
 {result}
 
-Summarize this naturally for the user. Keep it brief (1-2 sentences). Do not mention technical details like "subagent" or task IDs."""
+请为用户自然地总结一下。保持简短（1-2 句话）。不要提及"子 Agent"或任务 ID 等技术细节。"""
         
         # Inject as system message to trigger main agent
         msg = InboundMessage(
@@ -193,41 +193,41 @@ Summarize this naturally for the user. Keep it brief (1-2 sentences). Do not men
             chat_id=f"{origin['channel']}:{origin['chat_id']}",
             content=announce_content,
         )
-        
+
         await self.bus.publish_inbound(msg)
-        logger.debug(f"Subagent [{task_id}] announced result to {origin['channel']}:{origin['chat_id']}")
-    
+        logger.debug(f"子 Agent [{task_id}] 已向 {origin['channel']}:{origin['chat_id']} 公布结果")
+
     def _build_subagent_prompt(self, task: str) -> str:
-        """Build a focused system prompt for the subagent."""
-        return f"""# Subagent
+        """为子 Agent 构建专注的系统提示。"""
+        return f"""# 子 Agent
 
-You are a subagent spawned by the main agent to complete a specific task.
+你是主 Agent 生成的子 Agent，用于完成特定任务。
 
-## Your Task
+## 你的任务
 {task}
 
-## Rules
-1. Stay focused - complete only the assigned task, nothing else
-2. Your final response will be reported back to the main agent
-3. Do not initiate conversations or take on side tasks
-4. Be concise but informative in your findings
+## 规则
+1. 保持专注 - 只完成指定的任务，不做其他事情
+2. 你的最终响应将报告给主 Agent
+3. 不要发起对话或承担副任务
+4. 在发现中保持简洁但信息丰富
 
-## What You Can Do
-- Read and write files in the workspace
-- Execute shell commands
-- Search the web and fetch web pages
-- Complete the task thoroughly
+## 你可以做什么
+- 读取和写入工作区中的文件
+- 执行 Shell 命令
+- 搜索网络和获取网页
+- 彻底完成任务
 
-## What You Cannot Do
-- Send messages directly to users (no message tool available)
-- Spawn other subagents
-- Access the main agent's conversation history
+## 你不能做什么
+- 直接向用户发送消息（没有消息工具）
+- 生成其他子 Agent
+- 访问主 Agent 的对话历史
 
-## Workspace
-Your workspace is at: {self.workspace}
+## 工作区
+你的工作区位于：{self.workspace}
 
-When you have completed the task, provide a clear summary of your findings or actions."""
+完成任务后，请清晰总结你的发现或操作。"""
     
     def get_running_count(self) -> int:
-        """Return the number of currently running subagents."""
+        """返回当前运行的子 Agent 数量。"""
         return len(self._running_tasks)

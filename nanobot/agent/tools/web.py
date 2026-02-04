@@ -1,4 +1,4 @@
-"""Web tools: web_search and web_fetch."""
+"""Web 工具：web_search 和 web_fetch。"""
 
 import html
 import json
@@ -17,7 +17,7 @@ MAX_REDIRECTS = 5  # Limit redirects to prevent DoS attacks
 
 
 def _strip_tags(text: str) -> str:
-    """Remove HTML tags and decode entities."""
+    """移除 HTML 标签并解码实体。"""
     text = re.sub(r'<script[\s\S]*?</script>', '', text, flags=re.I)
     text = re.sub(r'<style[\s\S]*?</style>', '', text, flags=re.I)
     text = re.sub(r'<[^>]+>', '', text)
@@ -25,34 +25,34 @@ def _strip_tags(text: str) -> str:
 
 
 def _normalize(text: str) -> str:
-    """Normalize whitespace."""
+    """规范化空白字符。"""
     text = re.sub(r'[ \t]+', ' ', text)
     return re.sub(r'\n{3,}', '\n\n', text).strip()
 
 
 def _validate_url(url: str) -> tuple[bool, str]:
-    """Validate URL: must be http(s) with valid domain."""
+    """验证 URL：必须是 http(s) 且域名有效。"""
     try:
         p = urlparse(url)
         if p.scheme not in ('http', 'https'):
-            return False, f"Only http/https allowed, got '{p.scheme or 'none'}'"
+            return False, f"仅允许 http/https，得到的是'{p.scheme or 'none'}'"
         if not p.netloc:
-            return False, "Missing domain"
+            return False, "缺少域名"
         return True, ""
     except Exception as e:
         return False, str(e)
 
 
 class WebSearchTool(Tool):
-    """Search the web using Brave Search API."""
+    """使用 Brave Search API 搜索网络。"""
     
     name = "web_search"
-    description = "Search the web. Returns titles, URLs, and snippets."
+    description = "搜索网络。返回标题、URL 和摘要。"
     parameters = {
         "type": "object",
         "properties": {
-            "query": {"type": "string", "description": "Search query"},
-            "count": {"type": "integer", "description": "Results (1-10)", "minimum": 1, "maximum": 10}
+            "query": {"type": "string", "description": "搜索查询"},
+            "count": {"type": "integer", "description": "结果数量（1-10）", "minimum": 1, "maximum": 10}
         },
         "required": ["query"]
     }
@@ -63,7 +63,7 @@ class WebSearchTool(Tool):
     
     async def execute(self, query: str, count: int | None = None, **kwargs: Any) -> str:
         if not self.api_key:
-            return "Error: BRAVE_API_KEY not configured"
+            return "错误：未配置 BRAVE_API_KEY"
         
         try:
             n = min(max(count or self.max_results, 1), 10)
@@ -78,27 +78,27 @@ class WebSearchTool(Tool):
             
             results = r.json().get("web", {}).get("results", [])
             if not results:
-                return f"No results for: {query}"
+                return f"没有结果：{query}"
             
-            lines = [f"Results for: {query}\n"]
+            lines = [f"搜索结果：{query}\n"]
             for i, item in enumerate(results[:n], 1):
                 lines.append(f"{i}. {item.get('title', '')}\n   {item.get('url', '')}")
                 if desc := item.get("description"):
                     lines.append(f"   {desc}")
             return "\n".join(lines)
         except Exception as e:
-            return f"Error: {e}"
+            return f"错误：{e}"
 
 
 class WebFetchTool(Tool):
-    """Fetch and extract content from a URL using Readability."""
+    """使用 Readability 从 URL 获取并提取内容。"""
     
     name = "web_fetch"
-    description = "Fetch URL and extract readable content (HTML → markdown/text)."
+    description = "获取 URL 并提取可读内容（HTML → markdown/text）。"
     parameters = {
         "type": "object",
         "properties": {
-            "url": {"type": "string", "description": "URL to fetch"},
+            "url": {"type": "string", "description": "要获取的 URL"},
             "extractMode": {"type": "string", "enum": ["markdown", "text"], "default": "markdown"},
             "maxChars": {"type": "integer", "minimum": 100}
         },
@@ -116,7 +116,7 @@ class WebFetchTool(Tool):
         # Validate URL before fetching
         is_valid, error_msg = _validate_url(url)
         if not is_valid:
-            return json.dumps({"error": f"URL validation failed: {error_msg}", "url": url})
+            return json.dumps({"error": f"URL 验证失败：{error_msg}", "url": url})
 
         try:
             async with httpx.AsyncClient(
@@ -151,7 +151,7 @@ class WebFetchTool(Tool):
             return json.dumps({"error": str(e), "url": url})
     
     def _to_markdown(self, html: str) -> str:
-        """Convert HTML to markdown."""
+        """将 HTML 转换为 markdown。"""
         # Convert links, headings, lists before stripping tags
         text = re.sub(r'<a\s+[^>]*href=["\']([^"\']+)["\'][^>]*>([\s\S]*?)</a>',
                       lambda m: f'[{_strip_tags(m[2])}]({m[1]})', html, flags=re.I)

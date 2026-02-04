@@ -1,4 +1,4 @@
-"""Channel manager for coordinating chat channels."""
+"""用于协调聊天渠道的渠道管理器。"""
 
 import asyncio
 from typing import Any
@@ -13,12 +13,12 @@ from nanobot.config.schema import Config
 
 class ChannelManager:
     """
-    Manages chat channels and coordinates message routing.
-    
-    Responsibilities:
-    - Initialize enabled channels (Telegram, WhatsApp, etc.)
-    - Start/stop channels
-    - Route outbound messages
+    管理聊天渠道并协调消息路由。
+
+    职责：
+    - 初始化启用的渠道（Telegram、WhatsApp 等）
+    - 启动/停止渠道
+    - 路由出站消息
     """
     
     def __init__(self, config: Config, bus: MessageBus):
@@ -30,7 +30,7 @@ class ChannelManager:
         self._init_channels()
     
     def _init_channels(self) -> None:
-        """Initialize channels based on config."""
+        """根据配置初始化渠道。"""
         
         # Telegram channel
         if self.config.channels.telegram.enabled:
@@ -41,10 +41,10 @@ class ChannelManager:
                     self.bus,
                     groq_api_key=self.config.providers.groq.api_key,
                 )
-                logger.info("Telegram channel enabled")
+                logger.info("Telegram 渠道已启用")
             except ImportError as e:
-                logger.warning(f"Telegram channel not available: {e}")
-        
+                logger.warning(f"Telegram 渠道不可用：{e}")
+
         # WhatsApp channel
         if self.config.channels.whatsapp.enabled:
             try:
@@ -52,14 +52,14 @@ class ChannelManager:
                 self.channels["whatsapp"] = WhatsAppChannel(
                     self.config.channels.whatsapp, self.bus
                 )
-                logger.info("WhatsApp channel enabled")
+                logger.info("WhatsApp 渠道已启用")
             except ImportError as e:
-                logger.warning(f"WhatsApp channel not available: {e}")
+                logger.warning(f"WhatsApp 渠道不可用：{e}")
     
     async def start_all(self) -> None:
-        """Start WhatsApp channel and the outbound dispatcher."""
+        """启动 WhatsApp 渠道和出站分发器。"""
         if not self.channels:
-            logger.warning("No channels enabled")
+            logger.warning("没有启用的渠道")
             return
         
         # Start outbound dispatcher
@@ -75,8 +75,8 @@ class ChannelManager:
         await asyncio.gather(*tasks, return_exceptions=True)
     
     async def stop_all(self) -> None:
-        """Stop all channels and the dispatcher."""
-        logger.info("Stopping all channels...")
+        """停止所有渠道和分发器。"""
+        logger.info("正在停止所有渠道...")
         
         # Stop dispatcher
         if self._dispatch_task:
@@ -95,8 +95,8 @@ class ChannelManager:
                 logger.error(f"Error stopping {name}: {e}")
     
     async def _dispatch_outbound(self) -> None:
-        """Dispatch outbound messages to the appropriate channel."""
-        logger.info("Outbound dispatcher started")
+        """将出站消息分发到相应的渠道。"""
+        logger.info("出站分发器已启动")
         
         while True:
             try:
@@ -110,9 +110,9 @@ class ChannelManager:
                     try:
                         await channel.send(msg)
                     except Exception as e:
-                        logger.error(f"Error sending to {msg.channel}: {e}")
+                        logger.error(f"发送到 {msg.channel} 时出错：{e}")
                 else:
-                    logger.warning(f"Unknown channel: {msg.channel}")
+                    logger.warning(f"未知渠道：{msg.channel}")
                     
             except asyncio.TimeoutError:
                 continue
@@ -120,11 +120,11 @@ class ChannelManager:
                 break
     
     def get_channel(self, name: str) -> BaseChannel | None:
-        """Get a channel by name."""
+        """按名称获取渠道。"""
         return self.channels.get(name)
     
     def get_status(self) -> dict[str, Any]:
-        """Get status of all channels."""
+        """获取所有渠道的状态。"""
         return {
             name: {
                 "enabled": True,
@@ -135,5 +135,5 @@ class ChannelManager:
     
     @property
     def enabled_channels(self) -> list[str]:
-        """Get list of enabled channel names."""
+        """获取已启用的渠道名称列表。"""
         return list(self.channels.keys())

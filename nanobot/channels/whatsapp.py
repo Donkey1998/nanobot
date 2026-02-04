@@ -1,4 +1,4 @@
-"""WhatsApp channel implementation using Node.js bridge."""
+"""使用 Node.js 桥接的 WhatsApp 渠道实现。"""
 
 import asyncio
 import json
@@ -14,10 +14,10 @@ from nanobot.config.schema import WhatsAppConfig
 
 class WhatsAppChannel(BaseChannel):
     """
-    WhatsApp channel that connects to a Node.js bridge.
-    
-    The bridge uses @whiskeysockets/baileys to handle the WhatsApp Web protocol.
-    Communication between Python and Node.js is via WebSocket.
+    连接到 Node.js 桥接的 WhatsApp 渠道。
+
+    桥接使用 @whiskeysockets/baileys 来处理 WhatsApp Web 协议。
+    Python 和 Node.js 之间的通信通过 WebSocket 进行。
     """
     
     name = "whatsapp"
@@ -34,7 +34,7 @@ class WhatsAppChannel(BaseChannel):
         
         bridge_url = self.config.bridge_url
         
-        logger.info(f"Connecting to WhatsApp bridge at {bridge_url}...")
+        logger.info(f"正在连接到 WhatsApp 桥接，地址：{bridge_url}...")
         
         self._running = True
         
@@ -43,7 +43,7 @@ class WhatsAppChannel(BaseChannel):
                 async with websockets.connect(bridge_url) as ws:
                     self._ws = ws
                     self._connected = True
-                    logger.info("Connected to WhatsApp bridge")
+                    logger.info("已连接到 WhatsApp 桥接")
                     
                     # Listen for messages
                     async for message in ws:
@@ -57,10 +57,10 @@ class WhatsAppChannel(BaseChannel):
             except Exception as e:
                 self._connected = False
                 self._ws = None
-                logger.warning(f"WhatsApp bridge connection error: {e}")
-                
+                logger.warning(f"WhatsApp 桥接连接错误：{e}")
+
                 if self._running:
-                    logger.info("Reconnecting in 5 seconds...")
+                    logger.info("将在 5 秒后重新连接...")
                     await asyncio.sleep(5)
     
     async def stop(self) -> None:

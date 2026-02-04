@@ -1,4 +1,4 @@
-"""Agent loop: the core processing engine."""
+"""Agent 循环：核心处理引擎。"""
 
 import asyncio
 import json
@@ -23,14 +23,14 @@ from nanobot.session.manager import SessionManager
 
 class AgentLoop:
     """
-    The agent loop is the core processing engine.
-    
-    It:
-    1. Receives messages from the bus
-    2. Builds context with history, memory, skills
-    3. Calls the LLM
-    4. Executes tool calls
-    5. Sends responses back
+    Agent 循环是核心处理引擎。
+
+    它：
+    1. 从总线接收消息
+    2. 使用历史、记忆、技能构建上下文
+    3. 调用 LLM
+    4. 执行工具调用
+    5. 发回响应
     """
     
     def __init__(
@@ -64,7 +64,7 @@ class AgentLoop:
         self._register_default_tools()
     
     def _register_default_tools(self) -> None:
-        """Register the default set of tools."""
+        """注册默认工具集。"""
         # File tools
         self.tools.register(ReadFileTool())
         self.tools.register(WriteFileTool())
@@ -87,9 +87,9 @@ class AgentLoop:
         self.tools.register(spawn_tool)
     
     async def run(self) -> None:
-        """Run the agent loop, processing messages from the bus."""
+        """运行 Agent 循环，处理来自总线的消息。"""
         self._running = True
-        logger.info("Agent loop started")
+        logger.info("Agent 循环已启动")
         
         while self._running:
             try:
@@ -105,37 +105,37 @@ class AgentLoop:
                     if response:
                         await self.bus.publish_outbound(response)
                 except Exception as e:
-                    logger.error(f"Error processing message: {e}")
-                    # Send error response
+                    logger.error(f"处理消息时出错：{e}")
+                    # 发送错误响应
                     await self.bus.publish_outbound(OutboundMessage(
                         channel=msg.channel,
                         chat_id=msg.chat_id,
-                        content=f"Sorry, I encountered an error: {str(e)}"
+                        content=f"抱歉，我遇到了错误：{str(e)}"
                     ))
             except asyncio.TimeoutError:
                 continue
     
     def stop(self) -> None:
-        """Stop the agent loop."""
+        """停止 Agent 循环。"""
         self._running = False
-        logger.info("Agent loop stopping")
+        logger.info("Agent 循环正在停止")
     
     async def _process_message(self, msg: InboundMessage) -> OutboundMessage | None:
         """
-        Process a single inbound message.
-        
+        处理单条入站消息。
+
         Args:
-            msg: The inbound message to process.
-        
+            msg: 要处理的入站消息。
+
         Returns:
-            The response message, or None if no response needed.
+            响应消息，如果不需要响应则为 None。
         """
-        # Handle system messages (subagent announces)
-        # The chat_id contains the original "channel:chat_id" to route back to
+        # 处理系统消息（子 Agent 公布）
+        # chat_id 包含原始的 "channel:chat_id" 用于路由返回
         if msg.channel == "system":
             return await self._process_system_message(msg)
-        
-        logger.info(f"Processing message from {msg.channel}:{msg.sender_id}")
+
+        logger.info(f"正在处理来自 {msg.channel}:{msg.sender_id} 的消息")
         
         # Get or create session
         session = self.sessions.get_or_create(msg.session_key)
@@ -202,7 +202,7 @@ class AgentLoop:
                 break
         
         if final_content is None:
-            final_content = "I've completed processing but have no response to give."
+            final_content = "我已完成处理，但没有可提供的响应。"
         
         # Save to session
         session.add_message("user", msg.content)
@@ -217,24 +217,24 @@ class AgentLoop:
     
     async def _process_system_message(self, msg: InboundMessage) -> OutboundMessage | None:
         """
-        Process a system message (e.g., subagent announce).
-        
-        The chat_id field contains "original_channel:original_chat_id" to route
-        the response back to the correct destination.
+        处理系统消息（例如，子 Agent 公布）。
+
+        chat_id 字段包含 "original_channel:original_chat_id" 以将
+        响应路由回正确的目标。
         """
-        logger.info(f"Processing system message from {msg.sender_id}")
+        logger.info(f"正在处理来自 {msg.sender_id} 的系统消息")
         
-        # Parse origin from chat_id (format: "channel:chat_id")
+        # 从 chat_id 解析来源（格式："channel:chat_id"）
         if ":" in msg.chat_id:
             parts = msg.chat_id.split(":", 1)
             origin_channel = parts[0]
             origin_chat_id = parts[1]
         else:
-            # Fallback
+            # 回退
             origin_channel = "cli"
             origin_chat_id = msg.chat_id
-        
-        # Use the origin session for context
+
+        # 使用来源会话作为上下文
         session_key = f"{origin_channel}:{origin_chat_id}"
         session = self.sessions.get_or_create(session_key)
         
@@ -294,10 +294,10 @@ class AgentLoop:
                 break
         
         if final_content is None:
-            final_content = "Background task completed."
-        
-        # Save to session (mark as system message in history)
-        session.add_message("user", f"[System: {msg.sender_id}] {msg.content}")
+            final_content = "后台任务已完成。"
+
+        # 保存到会话（在历史中标记为系统消息）
+        session.add_message("user", f"[系统：{msg.sender_id}] {msg.content}")
         session.add_message("assistant", final_content)
         self.sessions.save(session)
         
@@ -309,14 +309,14 @@ class AgentLoop:
     
     async def process_direct(self, content: str, session_key: str = "cli:direct") -> str:
         """
-        Process a message directly (for CLI usage).
-        
+        直接处理消息（用于 CLI）。
+
         Args:
-            content: The message content.
-            session_key: Session identifier.
-        
+            content: 消息内容。
+            session_key: 会话标识符。
+
         Returns:
-            The agent's response.
+            Agent 的响应。
         """
         msg = InboundMessage(
             channel="cli",

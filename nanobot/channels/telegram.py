@@ -1,4 +1,4 @@
-"""Telegram channel implementation using python-telegram-bot."""
+"""使用 python-telegram-bot 的 Telegram 渠道实现。"""
 
 import asyncio
 import re
@@ -78,9 +78,9 @@ def _markdown_to_telegram_html(text: str) -> str:
 
 class TelegramChannel(BaseChannel):
     """
-    Telegram channel using long polling.
-    
-    Simple and reliable - no webhook/public IP needed.
+    使用长轮询的 Telegram 渠道。
+
+    简单可靠 - 不需要 webhook/公网 IP。
     """
     
     name = "telegram"
@@ -95,7 +95,7 @@ class TelegramChannel(BaseChannel):
     async def start(self) -> None:
         """Start the Telegram bot with long polling."""
         if not self.config.token:
-            logger.error("Telegram bot token not configured")
+            logger.error("未配置 Telegram bot token")
             return
         
         self._running = True
@@ -120,7 +120,7 @@ class TelegramChannel(BaseChannel):
         from telegram.ext import CommandHandler
         self._app.add_handler(CommandHandler("start", self._on_start))
         
-        logger.info("Starting Telegram bot (polling mode)...")
+        logger.info("正在启动 Telegram bot（轮询模式）...")
         
         # Initialize and start polling
         await self._app.initialize()
@@ -128,7 +128,7 @@ class TelegramChannel(BaseChannel):
         
         # Get bot info
         bot_info = await self._app.bot.get_me()
-        logger.info(f"Telegram bot @{bot_info.username} connected")
+        logger.info(f"Telegram bot @{bot_info.username} 已连接")
         
         # Start polling (this runs until stopped)
         await self._app.updater.start_polling(
@@ -187,8 +187,8 @@ class TelegramChannel(BaseChannel):
         
         user = update.effective_user
         await update.message.reply_text(
-            f"👋 Hi {user.first_name}! I'm nanobot.\n\n"
-            "Send me a message and I'll respond!"
+            f"👋 你好 {user.first_name}！我是 nanobot。\n\n"
+            "给我发消息，我会回复你！"
         )
     
     async def _on_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

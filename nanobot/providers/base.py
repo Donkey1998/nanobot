@@ -1,4 +1,4 @@
-"""Base LLM provider interface."""
+"""基础 LLM 提供商接口。"""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -7,7 +7,7 @@ from typing import Any
 
 @dataclass
 class ToolCallRequest:
-    """A tool call request from the LLM."""
+    """来自 LLM 的工具调用请求。"""
     id: str
     name: str
     arguments: dict[str, Any]
@@ -15,7 +15,7 @@ class ToolCallRequest:
 
 @dataclass
 class LLMResponse:
-    """Response from an LLM provider."""
+    """LLM 提供商的响应。"""
     content: str | None
     tool_calls: list[ToolCallRequest] = field(default_factory=list)
     finish_reason: str = "stop"
@@ -23,16 +23,16 @@ class LLMResponse:
     
     @property
     def has_tool_calls(self) -> bool:
-        """Check if response contains tool calls."""
+        """检查响应是否包含工具调用。"""
         return len(self.tool_calls) > 0
 
 
 class LLMProvider(ABC):
     """
-    Abstract base class for LLM providers.
-    
-    Implementations should handle the specifics of each provider's API
-    while maintaining a consistent interface.
+    LLM 提供商的抽象基类。
+
+    实现应处理每个提供商 API 的细节，
+    同时保持一致的接口。
     """
     
     def __init__(self, api_key: str | None = None, api_base: str | None = None):
@@ -49,21 +49,21 @@ class LLMProvider(ABC):
         temperature: float = 0.7,
     ) -> LLMResponse:
         """
-        Send a chat completion request.
-        
+        发送聊天完成请求。
+
         Args:
-            messages: List of message dicts with 'role' and 'content'.
-            tools: Optional list of tool definitions.
-            model: Model identifier (provider-specific).
-            max_tokens: Maximum tokens in response.
-            temperature: Sampling temperature.
-        
+            messages: 包含 'role' 和 'content' 的消息字典列表。
+            tools: 可选的工具定义列表。
+            model: 模型标识符（特定于提供商）。
+            max_tokens: 响应中的最大令牌数。
+            temperature: 采样温度。
+
         Returns:
-            LLMResponse with content and/or tool calls.
+            包含内容和/或工具调用的 LLMResponse。
         """
         pass
     
     @abstractmethod
     def get_default_model(self) -> str:
-        """Get the default model for this provider."""
+        """获取此提供商的默认模型。"""
         pass

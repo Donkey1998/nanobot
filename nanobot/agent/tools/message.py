@@ -1,4 +1,4 @@
-"""Message tool for sending messages to users."""
+"""用于向用户发送消息的工具。"""
 
 from typing import Any, Callable, Awaitable
 
@@ -7,7 +7,7 @@ from nanobot.bus.events import OutboundMessage
 
 
 class MessageTool(Tool):
-    """Tool to send messages to users on chat channels."""
+    """向聊天渠道的用户发送消息的工具。"""
     
     def __init__(
         self, 
@@ -20,12 +20,12 @@ class MessageTool(Tool):
         self._default_chat_id = default_chat_id
     
     def set_context(self, channel: str, chat_id: str) -> None:
-        """Set the current message context."""
+        """设置当前消息上下文。"""
         self._default_channel = channel
         self._default_chat_id = chat_id
     
     def set_send_callback(self, callback: Callable[[OutboundMessage], Awaitable[None]]) -> None:
-        """Set the callback for sending messages."""
+        """设置发送消息的回调函数。"""
         self._send_callback = callback
     
     @property
@@ -34,7 +34,7 @@ class MessageTool(Tool):
     
     @property
     def description(self) -> str:
-        return "Send a message to the user. Use this when you want to communicate something."
+        return "向用户发送消息。当你想要传达某些信息时使用此工具。"
     
     @property
     def parameters(self) -> dict[str, Any]:
@@ -43,15 +43,15 @@ class MessageTool(Tool):
             "properties": {
                 "content": {
                     "type": "string",
-                    "description": "The message content to send"
+                    "description": "要发送的消息内容"
                 },
                 "channel": {
                     "type": "string",
-                    "description": "Optional: target channel (telegram, discord, etc.)"
+                    "description": "可选：目标渠道（telegram、discord 等）"
                 },
                 "chat_id": {
                     "type": "string",
-                    "description": "Optional: target chat/user ID"
+                    "description": "可选：目标聊天/用户 ID"
                 }
             },
             "required": ["content"]
@@ -68,10 +68,10 @@ class MessageTool(Tool):
         chat_id = chat_id or self._default_chat_id
         
         if not channel or not chat_id:
-            return "Error: No target channel/chat specified"
+            return "错误：未指定目标渠道/聊天"
         
         if not self._send_callback:
-            return "Error: Message sending not configured"
+            return "错误：消息发送未配置"
         
         msg = OutboundMessage(
             channel=channel,
@@ -81,6 +81,6 @@ class MessageTool(Tool):
         
         try:
             await self._send_callback(msg)
-            return f"Message sent to {channel}:{chat_id}"
+            return f"消息已发送到 {channel}:{chat_id}"
         except Exception as e:
-            return f"Error sending message: {str(e)}"
+            return f"发送消息错误：{str(e)}"

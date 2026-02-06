@@ -1,4 +1,4 @@
-"""LiteLLM provider implementation for multi-provider support."""
+"""LiteLLM 提供商实现，支持多提供商接入。"""
 
 import os
 from typing import Any
@@ -11,10 +11,9 @@ from nanobot.providers.base import LLMProvider, LLMResponse, ToolCallRequest
 
 class LiteLLMProvider(LLMProvider):
     """
-    LLM provider using LiteLLM for multi-provider support.
-    
-    Supports OpenRouter, Anthropic, OpenAI, Gemini, and many other providers through
-    a unified interface.
+    使用 LiteLLM 的 LLM 提供商，支持多提供商接入。
+
+    通过统一接口支持 OpenRouter、Anthropic、OpenAI、Gemini 以及许多其他提供商。
     """
     
     def __init__(
@@ -26,33 +25,33 @@ class LiteLLMProvider(LLMProvider):
         super().__init__(api_key, api_base)
         self.default_model = default_model
         
-        # Detect provider type from model name first
+        # 首先从模型名称检测提供商类型
         self.is_zhipu = "zhipu" in default_model or "zhipuai" in default_model or "glm" in default_model or "zai" in default_model
         self.is_anthropic = "anthropic" in default_model
         self.is_openai = "openai" in default_model or "gpt" in default_model
         self.is_gemini = "gemini" in default_model.lower()
         self.is_groq = "groq" in default_model
 
-        # Detect OpenRouter by api_key prefix or explicit api_base
+        # 通过 api_key 前缀或明确的 api_base 检测 OpenRouter
         self.is_openrouter = (
             (api_key and api_key.startswith("sk-or-")) or
             (api_base and "openrouter" in api_base)
         )
 
-        # Track if using custom endpoint (vLLM, etc.) - exclude known providers
+        # 追踪是否使用自定义端点（vLLM 等）- 排除已知提供商
         self.is_vllm = bool(api_base) and not self.is_openrouter and not self.is_zhipu
 
-        # Configure LiteLLM based on provider
+        # 根据提供商配置 LiteLLM
         if api_key:
             if self.is_openrouter:
-                # OpenRouter mode - set key
+                # OpenRouter 模式 - 设置密钥
                 os.environ["OPENROUTER_API_KEY"] = api_key
             elif self.is_zhipu:
-                # Zhipu AI - 需要 ZAI_API_KEY 用于 zhipu Python SDK
+                # 智谱 AI - 需要 ZAI_API_KEY 用于 zhipu Python SDK
                 os.environ["ZAI_API_KEY"] = api_key
                 os.environ.setdefault("ZHIPUAI_API_KEY", api_key)
             elif self.is_vllm:
-                # vLLM/custom endpoint - uses OpenAI-compatible API
+                # vLLM/自定义端点 - 使用 OpenAI 兼容 API
                 os.environ["OPENAI_API_KEY"] = api_key
             elif self.is_anthropic:
                 os.environ.setdefault("ANTHROPIC_API_KEY", api_key)
@@ -66,7 +65,7 @@ class LiteLLMProvider(LLMProvider):
         if api_base:
             litellm.api_base = api_base
         
-        # Disable LiteLLM logging noise
+        # 禁用 LiteLLM 的日志噪音
         litellm.suppress_debug_info = True
     
     async def chat(
@@ -78,26 +77,26 @@ class LiteLLMProvider(LLMProvider):
         temperature: float = 0.7,
     ) -> LLMResponse:
         """
-        Send a chat completion request via LiteLLM.
-        
+        通过 LiteLLM 发送聊天完成请求。
+
         Args:
-            messages: List of message dicts with 'role' and 'content'.
-            tools: Optional list of tool definitions in OpenAI format.
-            model: Model identifier (e.g., 'anthropic/claude-sonnet-4-5').
-            max_tokens: Maximum tokens in response.
-            temperature: Sampling temperature.
-        
+            messages: 包含 'role' 和 'content' 的消息字典列表。
+            tools: 可选的工具定义列表，使用 OpenAI 格式。
+            model: 模型标识符（例如 'anthropic/claude-sonnet-4-5'）。
+            max_tokens: 响应中的最大令牌数。
+            temperature: 采样温度。
+
         Returns:
-            LLMResponse with content and/or tool calls.
+            包含内容和/或工具调用的 LLMResponse。
         """
         model = model or self.default_model
-        
-        # For OpenRouter, prefix model name if not already prefixed
+
+        # 对于 OpenRouter，如果尚未添加前缀则添加
         if self.is_openrouter and not model.startswith("openrouter/"):
             model = f"openrouter/{model}"
-        
-        # For Zhipu/Z.ai, ensure prefix is present
-        # Handle cases like "glm-4.7-flash" -> "zhipuai/glm-4.7-flash"
+
+        # 对于智谱/Z.ai，确保前缀存在
+        # 处理如 "glm-4.7-flash" -> "zhipuai/glm-4.7-flash" 的情况
         if ("glm" in model.lower() or "zhipu" in model.lower() or "zhipuai" in model.lower()) and not (
             model.startswith("zhipuai/") or
             model.startswith("zhipu/") or
@@ -105,13 +104,13 @@ class LiteLLMProvider(LLMProvider):
             model.startswith("openrouter/")
         ):
             model = f"zhipuai/{model}"
-        
-        # For vLLM, use hosted_vllm/ prefix per LiteLLM docs
-        # Convert openai/ prefix to hosted_vllm/ if user specified it
+
+        # 对于 vLLM，根据 LiteLLM 文档使用 hosted_vllm/ 前缀
+        # 如果用户指定了 openai/ 前缀，则转换为 hosted_vllm/
         if self.is_vllm:
             model = f"hosted_vllm/{model}"
-        
-        # For Gemini, ensure gemini/ prefix if not already present
+
+        # 对于 Gemini，确保 gemini/ 前缀存在
         if "gemini" in model.lower() and not model.startswith("gemini/"):
             model = f"gemini/{model}"
         
@@ -122,7 +121,7 @@ class LiteLLMProvider(LLMProvider):
             "temperature": temperature,
         }
         
-        # Pass api_base directly for custom endpoints (vLLM, etc.)
+        # 对于自定义端点（vLLM 等），直接传递 api_base
         if self.api_base:
             kwargs["api_base"] = self.api_base
         
@@ -134,21 +133,21 @@ class LiteLLMProvider(LLMProvider):
             response = await acompletion(**kwargs)
             return self._parse_response(response)
         except Exception as e:
-            # Return error as content for graceful handling
+            # 将错误作为内容返回以实现优雅处理
             return LLMResponse(
                 content=f"Error calling LLM: {str(e)}",
                 finish_reason="error",
             )
     
     def _parse_response(self, response: Any) -> LLMResponse:
-        """Parse LiteLLM response into our standard format."""
+        """将 LiteLLM 响应解析为我们的标准格式。"""
         choice = response.choices[0]
         message = choice.message
         
         tool_calls = []
         if hasattr(message, "tool_calls") and message.tool_calls:
             for tc in message.tool_calls:
-                # Parse arguments from JSON string if needed
+                # 如果需要，从 JSON 字符串解析参数
                 args = tc.function.arguments
                 if isinstance(args, str):
                     import json
@@ -179,5 +178,5 @@ class LiteLLMProvider(LLMProvider):
         )
     
     def get_default_model(self) -> str:
-        """Get the default model."""
+        """获取默认模型。"""
         return self.default_model

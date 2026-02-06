@@ -1,4 +1,4 @@
-"""Configuration loading utilities."""
+"""配置加载工具。"""
 
 import json
 from pathlib import Path
@@ -8,25 +8,25 @@ from nanobot.config.schema import Config
 
 
 def get_config_path() -> Path:
-    """Get the default configuration file path."""
+    """获取默认配置文件路径。"""
     return Path.home() / ".nanobot" / "config.json"
 
 
 def get_data_dir() -> Path:
-    """Get the nanobot data directory."""
+    """获取 nanobot 数据目录。"""
     from nanobot.utils.helpers import get_data_path
     return get_data_path()
 
 
 def load_config(config_path: Path | None = None) -> Config:
     """
-    Load configuration from file or create default.
-    
+    从文件加载配置或创建默认配置。
+
     Args:
-        config_path: Optional path to config file. Uses default if not provided.
-    
+        config_path: 可选的配置文件路径。如未提供则使用默认路径。
+
     Returns:
-        Loaded configuration object.
+        加载的配置对象。
     """
     path = config_path or get_config_path()
     
@@ -37,23 +37,23 @@ def load_config(config_path: Path | None = None) -> Config:
             return Config.model_validate(convert_keys(data))
         except (json.JSONDecodeError, ValueError) as e:
             print(f"Warning: Failed to load config from {path}: {e}")
-            print("Using default configuration.")
+            print("使用默认配置。")
     
     return Config()
 
 
 def save_config(config: Config, config_path: Path | None = None) -> None:
     """
-    Save configuration to file.
-    
+    将配置保存到文件。
+
     Args:
-        config: Configuration to save.
-        config_path: Optional path to save to. Uses default if not provided.
+        config: 要保存的配置。
+        config_path: 可选的保存路径。如未提供则使用默认路径。
     """
     path = config_path or get_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     
-    # Convert to camelCase format
+    # 转换为 camelCase 格式
     data = config.model_dump()
     data = convert_to_camel(data)
     
@@ -62,7 +62,7 @@ def save_config(config: Config, config_path: Path | None = None) -> None:
 
 
 def convert_keys(data: Any) -> Any:
-    """Convert camelCase keys to snake_case for Pydantic."""
+    """将 camelCase 键转换为 snake_case 以用于 Pydantic。"""
     if isinstance(data, dict):
         return {camel_to_snake(k): convert_keys(v) for k, v in data.items()}
     if isinstance(data, list):
@@ -71,7 +71,7 @@ def convert_keys(data: Any) -> Any:
 
 
 def convert_to_camel(data: Any) -> Any:
-    """Convert snake_case keys to camelCase."""
+    """将 snake_case 键转换为 camelCase。"""
     if isinstance(data, dict):
         return {snake_to_camel(k): convert_to_camel(v) for k, v in data.items()}
     if isinstance(data, list):
@@ -80,7 +80,7 @@ def convert_to_camel(data: Any) -> Any:
 
 
 def camel_to_snake(name: str) -> str:
-    """Convert camelCase to snake_case."""
+    """将 camelCase 转换为 snake_case。"""
     result = []
     for i, char in enumerate(name):
         if char.isupper() and i > 0:
@@ -90,6 +90,6 @@ def camel_to_snake(name: str) -> str:
 
 
 def snake_to_camel(name: str) -> str:
-    """Convert snake_case to camelCase."""
+    """将 snake_case 转换为 camelCase。"""
     components = name.split("_")
     return components[0] + "".join(x.title() for x in components[1:])

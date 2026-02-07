@@ -39,7 +39,7 @@ class ContextBuilder:
         # Core identity
         parts.append(self._get_identity())
         
-        # Bootstrap files
+        # Bootstrap files  ["AGENTS.md", "SOUL.md", "USER.md", "TOOLS.md", "IDENTITY.md"]
         bootstrap = self._load_bootstrap_files()
         if bootstrap:
             parts.append(bootstrap)
@@ -66,6 +66,8 @@ class ContextBuilder:
 available="false" 的技能需要先安装依赖项 - 你可以尝试使用 apt/brew 安装它们。
 
 {skills_summary}""")
+            
+        print (parts)
         
         return "\n\n---\n\n".join(parts)
     

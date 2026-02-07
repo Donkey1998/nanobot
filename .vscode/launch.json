@@ -1,0 +1,82 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    
+    {
+      "name": "Python: 当前文件",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "Nanobot: Agent 交互模式",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "nanobot",
+      "args": [
+        "agent"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+    {
+      "name": "Nanobot: Agent 单条消息",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "nanobot",
+      "args": [
+        "agent",
+        "-m",
+        "你好"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+    {
+      "name": "Nanobot: Gateway 服务器",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "nanobot",
+      "args": [
+        "gateway",
+        "--verbose"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+    {
+      "name": "Nanobot: Status",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "nanobot",
+      "args": [
+        "status"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Nanobot: Cron List",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "nanobot",
+      "args": [
+        "cron",
+        "list"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}

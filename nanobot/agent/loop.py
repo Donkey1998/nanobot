@@ -17,6 +17,7 @@ from nanobot.agent.tools.shell import ExecTool
 from nanobot.agent.tools.web import WebSearchTool, WebFetchTool
 from nanobot.agent.tools.message import MessageTool
 from nanobot.agent.tools.spawn import SpawnTool
+from nanobot.agent.tools.cron import CronTool
 from nanobot.agent.subagent import SubagentManager
 from nanobot.session.manager import SessionManager
 """
@@ -49,8 +50,13 @@ class AgentLoop:
         workspace: Path,
         model: str | None = None,
         max_iterations: int = 20,
-        brave_api_key: str | None = None
+        brave_api_key: str | None = None,
+        exec_config: "ExecToolConfig | None" = None,
+        cron_service: "CronService | None" = None,
+        restrict_to_workspace: bool = False,
     ):
+        from nanobot.config.schema import ExecToolConfig
+        from nanobot.cron.service import CronService
         # 核心依赖：消息总线（用于接收/发送消息）、LLM 提供者、工作空间路径
         self.bus = bus
         self.provider = provider
@@ -60,6 +66,9 @@ class AgentLoop:
         # 防止无限循环：单个消息处理的最大工具调用迭代次数
         self.max_iterations = max_iterations
         self.brave_api_key = brave_api_key
+        self.exec_config = exec_config or ExecToolConfig()
+        self.cron_service = cron_service
+        self.restrict_to_workspace = restrict_to_workspace
 
         # 上下文构建器：负责组装发送给 LLM 的消息（包含系统提示、历史、当前消息等）
         self.context = ContextBuilder(workspace)
@@ -74,6 +83,8 @@ class AgentLoop:
             bus=bus,
             model=self.model,
             brave_api_key=brave_api_key,
+            exec_config=self.exec_config,
+            restrict_to_workspace=restrict_to_workspace,
         )
 
         self._running = False
@@ -90,14 +101,19 @@ class AgentLoop:
         - 消息发送：主动发送消息到对话频道
         - 子 agent：创建独立的 agent 实例处理并行任务
         """
-        # 文件系统工具：让 agent 能操作代码库
-        self.tools.register(ReadFileTool())
-        self.tools.register(WriteFileTool())
-        self.tools.register(EditFileTool())
-        self.tools.register(ListDirTool())
+        # 文件系统工具：让 agent 能操作代码库（如果配置了 restrict_to_workspace 则限制在工作空间内）
+        allowed_dir = self.workspace if self.restrict_to_workspace else None
+        self.tools.register(ReadFileTool(allowed_dir=allowed_dir))
+        self.tools.register(WriteFileTool(allowed_dir=allowed_dir))
+        self.tools.register(EditFileTool(allowed_dir=allowed_dir))
+        self.tools.register(ListDirTool(allowed_dir=allowed_dir))
 
         # Shell 工具：执行命令（注意安全限制，限制在工作空间内）
-        self.tools.register(ExecTool(working_dir=str(self.workspace)))
+        self.tools.register(ExecTool(
+            working_dir=str(self.workspace),
+            timeout=self.exec_config.timeout,
+            restrict_to_workspace=self.restrict_to_workspace,
+        ))
 
         # Web 工具：搜索和抓取（需要 Brave API key）
         self.tools.register(WebSearchTool(api_key=self.brave_api_key))
@@ -110,6 +126,10 @@ class AgentLoop:
         # 生成工具：创建子 agent 处理独立任务（例如后台运行、并行任务）
         spawn_tool = SpawnTool(manager=self.subagents)
         self.tools.register(spawn_tool)
+        
+        # Cron tool (for scheduling)
+        if self.cron_service:
+            self.tools.register(CronTool(self.cron_service))
     
     async def run(self) -> None:
         """运行 Agent 循环，处理来自总线的消息。"""
@@ -179,12 +199,18 @@ class AgentLoop:
         if isinstance(spawn_tool, SpawnTool):
             spawn_tool.set_context(msg.channel, msg.chat_id)
 
+        cron_tool = self.tools.get("cron")
+        if isinstance(cron_tool, CronTool):
+            cron_tool.set_context(msg.channel, msg.chat_id)
+
         # ========== 构建 LLM 上下文 ==========
         # 组装完整的消息列表：系统提示 + 历史记录 + 当前消息（包含媒体）
         messages = self.context.build_messages(
             history=session.get_history(),  # 从会话获取 LLM 格式的历史消息
             current_message=msg.content,
             media=msg.media if msg.media else None,  # 支持图片等多媒体内容
+            channel=msg.channel,
+            chat_id=msg.chat_id,
         )
         
         # ========== Agent 循环：LLM 与工具的迭代交互 ==========
@@ -290,10 +316,16 @@ class AgentLoop:
         if isinstance(spawn_tool, SpawnTool):
             spawn_tool.set_context(origin_channel, origin_chat_id)
         
+        cron_tool = self.tools.get("cron")
+        if isinstance(cron_tool, CronTool):
+            cron_tool.set_context(origin_channel, origin_chat_id)
+        
         # Build messages with the announce content
         messages = self.context.build_messages(
             history=session.get_history(),
-            current_message=msg.content
+            current_message=msg.content,
+            channel=origin_channel,
+            chat_id=origin_chat_id,
         )
         
         # Agent loop (limited for announce handling)
@@ -350,9 +382,15 @@ class AgentLoop:
             content=final_content
         )
     
-    async def process_direct(self, content: str, session_key: str = "cli:direct") -> str:
+    async def process_direct(
+        self,
+        content: str,
+        session_key: str = "cli:direct",
+        channel: str = "cli",
+        chat_id: str = "direct",
+    ) -> str:
         """
-        直接处理消息（用于 CLI 模式）。
+        直接处理消息（用于 CLI 或 cron 模式）。
 
         这个方法为命令行接口提供了简化的访问方式，绕过消息总线直接处理用户输入。
         相比消息总线模式，直接模式的延迟更低，适合交互式 CLI 使用场景。
@@ -360,15 +398,16 @@ class AgentLoop:
         Args:
             content: 用户输入的消息内容。
             session_key: 会话标识符，默认为 "cli:direct"。
-
+            channel: 来源渠道（用于上下文）。
+            chat_id: 来源聊天 ID（用于上下文）。
         Returns:
             Agent 的响应文本内容。
         """
         # 构造入站消息对象，模拟从消息总线接收的消息
         msg = InboundMessage(
-            channel="cli",
+            channel=channel,
             sender_id="user",
-            chat_id="direct",
+            chat_id=chat_id,
             content=content
         )
 

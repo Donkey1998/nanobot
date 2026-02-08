@@ -46,21 +46,26 @@ class LiteLLMProvider(LLMProvider):
             if self.is_openrouter:
                 # OpenRouter 模式 - 设置密钥
                 os.environ["OPENROUTER_API_KEY"] = api_key
-            elif self.is_zhipu:
-                # 智谱 AI - 需要 ZAI_API_KEY 用于 zhipu Python SDK
-                os.environ["ZAI_API_KEY"] = api_key
-                os.environ.setdefault("ZHIPUAI_API_KEY", api_key)
             elif self.is_vllm:
                 # vLLM/自定义端点 - 使用 OpenAI 兼容 API
-                os.environ["OPENAI_API_KEY"] = api_key
-            elif self.is_anthropic:
+                os.environ["HOSTED_VLLM_API_KEY"] = api_key
+            elif "deepseek" in default_model:
+                os.environ.setdefault("DEEPSEEK_API_KEY", api_key)
+            elif "anthropic" in default_model:
                 os.environ.setdefault("ANTHROPIC_API_KEY", api_key)
-            elif self.is_openai:
+            elif "openai" in default_model or "gpt" in default_model:
                 os.environ.setdefault("OPENAI_API_KEY", api_key)
-            elif self.is_gemini:
+            elif "gemini" in default_model.lower():
                 os.environ.setdefault("GEMINI_API_KEY", api_key)
-            elif self.is_groq:
+            elif "zhipu" in default_model or "glm" in default_model or "zai" in default_model:
+                os.environ.setdefault("ZAI_API_KEY", api_key)
+            elif "dashscope" in default_model or "qwen" in default_model.lower():
+                os.environ.setdefault("DASHSCOPE_API_KEY", api_key)
+            elif "groq" in default_model:
                 os.environ.setdefault("GROQ_API_KEY", api_key)
+            elif "moonshot" in default_model or "kimi" in default_model:
+                os.environ.setdefault("MOONSHOT_API_KEY", api_key)
+                os.environ.setdefault("MOONSHOT_API_BASE", api_base or "https://api.moonshot.cn/v1")
         
         if api_base:
             litellm.api_base = api_base
@@ -96,24 +101,40 @@ class LiteLLMProvider(LLMProvider):
             model = f"openrouter/{model}"
 
         # 对于智谱/Z.ai，确保前缀存在
-        # 处理如 "glm-4.7-flash" -> "zhipuai/glm-4.7-flash" 的情况
-        if ("glm" in model.lower() or "zhipu" in model.lower() or "zhipuai" in model.lower()) and not (
-            model.startswith("zhipuai/") or
+        # 处理如 "glm-4.7-flash" -> "zai/glm-4.7-flash" 的情况
+        if ("glm" in model.lower() or "zhipu" in model.lower()) and not (
             model.startswith("zhipu/") or
             model.startswith("zai/") or
             model.startswith("openrouter/")
         ):
-            model = f"zhipuai/{model}"
+            model = f"zai/{model}"
+
+        # 对于 DashScope/Qwen，确保 dashscope/ 前缀
+        if ("qwen" in model.lower() or "dashscope" in model.lower()) and not (
+            model.startswith("dashscope/") or
+            model.startswith("openrouter/")
+        ):
+            model = f"dashscope/{model}"
+
+        # 对于 Moonshot/Kimi，确保 moonshot/ 前缀（在 vLLM 检查之前）
+        if ("moonshot" in model.lower() or "kimi" in model.lower()) and not (
+            model.startswith("moonshot/") or model.startswith("openrouter/")
+        ):
+            model = f"moonshot/{model}"
+
+        # 对于 Gemini，确保 gemini/ 前缀存在
+        if "gemini" in model.lower() and not model.startswith("gemini/"):
+            model = f"gemini/{model}"
 
         # 对于 vLLM，根据 LiteLLM 文档使用 hosted_vllm/ 前缀
         # 如果用户指定了 openai/ 前缀，则转换为 hosted_vllm/
         if self.is_vllm:
             model = f"hosted_vllm/{model}"
 
-        # 对于 Gemini，确保 gemini/ 前缀存在
-        if "gemini" in model.lower() and not model.startswith("gemini/"):
-            model = f"gemini/{model}"
-        
+        # kimi-k2.5 只支持 temperature=1.0
+        if "kimi-k2.5" in model.lower():
+            temperature = 1.0
+
         kwargs: dict[str, Any] = {
             "model": model,
             "messages": messages,

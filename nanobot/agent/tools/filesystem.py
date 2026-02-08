@@ -6,9 +6,20 @@ from typing import Any
 from nanobot.agent.tools.base import Tool
 
 
+def _resolve_path(path: str, allowed_dir: Path | None = None) -> Path:
+    """Resolve path and optionally enforce directory restriction."""
+    resolved = Path(path).expanduser().resolve()
+    if allowed_dir and not str(resolved).startswith(str(allowed_dir.resolve())):
+        raise PermissionError(f"Path {path} is outside allowed directory {allowed_dir}")
+    return resolved
+
+
 class ReadFileTool(Tool):
     """读取文件内容的工具。"""
     
+    def __init__(self, allowed_dir: Path | None = None):
+        self._allowed_dir = allowed_dir
+
     @property
     def name(self) -> str:
         return "read_file"
@@ -32,7 +43,7 @@ class ReadFileTool(Tool):
     
     async def execute(self, path: str, **kwargs: Any) -> str:
         try:
-            file_path = Path(path).expanduser()
+            file_path = _resolve_path(path, self._allowed_dir)
             if not file_path.exists():
                 return f"错误：找不到文件：{path}"
             if not file_path.is_file():
@@ -40,8 +51,9 @@ class ReadFileTool(Tool):
             
             content = file_path.read_text(encoding="utf-8")
             return content
-        except PermissionError:
-            return f"错误：权限被拒绝：{path}"
+<<<<<<< HEAD
+        except PermissionError as e:
+            return f"错误：权限被拒绝：{e}"
         except Exception as e:
             return f"读取文件错误：{str(e)}"
 
@@ -49,6 +61,9 @@ class ReadFileTool(Tool):
 class WriteFileTool(Tool):
     """写入内容到文件的工具。"""
     
+    def __init__(self, allowed_dir: Path | None = None):
+        self._allowed_dir = allowed_dir
+
     @property
     def name(self) -> str:
         return "write_file"
@@ -76,12 +91,18 @@ class WriteFileTool(Tool):
     
     async def execute(self, path: str, content: str, **kwargs: Any) -> str:
         try:
-            file_path = Path(path).expanduser()
+            file_path = _resolve_path(path, self._allowed_dir)
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(content, encoding="utf-8")
+<<<<<<< HEAD
             return f"成功写入 {len(content)} 字节到 {path}"
         except PermissionError:
             return f"错误：权限被拒绝：{path}"
+=======
+            return f"Successfully wrote {len(content)} bytes to {path}"
+        except PermissionError as e:
+            return f"Error: {e}"
+>>>>>>> main
         except Exception as e:
             return f"写入文件错误：{str(e)}"
 
@@ -89,6 +110,9 @@ class WriteFileTool(Tool):
 class EditFileTool(Tool):
     """通过替换文本来编辑文件的工具。"""
     
+    def __init__(self, allowed_dir: Path | None = None):
+        self._allowed_dir = allowed_dir
+
     @property
     def name(self) -> str:
         return "edit_file"
@@ -120,7 +144,7 @@ class EditFileTool(Tool):
     
     async def execute(self, path: str, old_text: str, new_text: str, **kwargs: Any) -> str:
         try:
-            file_path = Path(path).expanduser()
+            file_path = _resolve_path(path, self._allowed_dir)
             if not file_path.exists():
                 return f"错误：找不到文件：{path}"
             
@@ -137,9 +161,15 @@ class EditFileTool(Tool):
             new_content = content.replace(old_text, new_text, 1)
             file_path.write_text(new_content, encoding="utf-8")
             
+<<<<<<< HEAD
             return f"成功编辑 {path}"
         except PermissionError:
             return f"错误：权限被拒绝：{path}"
+=======
+            return f"Successfully edited {path}"
+        except PermissionError as e:
+            return f"Error: {e}"
+>>>>>>> main
         except Exception as e:
             return f"编辑文件错误：{str(e)}"
 
@@ -147,6 +177,9 @@ class EditFileTool(Tool):
 class ListDirTool(Tool):
     """列出目录内容的工具。"""
     
+    def __init__(self, allowed_dir: Path | None = None):
+        self._allowed_dir = allowed_dir
+
     @property
     def name(self) -> str:
         return "list_dir"
@@ -170,7 +203,7 @@ class ListDirTool(Tool):
     
     async def execute(self, path: str, **kwargs: Any) -> str:
         try:
-            dir_path = Path(path).expanduser()
+            dir_path = _resolve_path(path, self._allowed_dir)
             if not dir_path.exists():
                 return f"错误：找不到目录：{path}"
             if not dir_path.is_dir():
@@ -185,7 +218,8 @@ class ListDirTool(Tool):
                 return f"目录 {path} 为空"
             
             return "\n".join(items)
-        except PermissionError:
-            return f"错误：权限被拒绝：{path}"
+<<<<<<< HEAD
+        except PermissionError as e:
+            return f"错误：权限被拒绝：{e}"
         except Exception as e:
             return f"列出目录错误：{str(e)}"

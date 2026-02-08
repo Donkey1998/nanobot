@@ -2,6 +2,8 @@
 
 import asyncio
 import os
+import re
+from pathlib import Path
 from typing import Any
 
 from nanobot.agent.tools.base import Tool
@@ -10,9 +12,28 @@ from nanobot.agent.tools.base import Tool
 class ExecTool(Tool):
     """执行 Shell 命令的工具。"""
     
-    def __init__(self, timeout: int = 60, working_dir: str | None = None):
+    def __init__(
+        self,
+        timeout: int = 60,
+        working_dir: str | None = None,
+        deny_patterns: list[str] | None = None,
+        allow_patterns: list[str] | None = None,
+        restrict_to_workspace: bool = False,
+    ):
         self.timeout = timeout
         self.working_dir = working_dir
+        self.deny_patterns = deny_patterns or [
+            r"\brm\s+-[rf]{1,2}\b",          # rm -r, rm -rf, rm -fr
+            r"\bdel\s+/[fq]\b",              # del /f, del /q
+            r"\brmdir\s+/s\b",               # rmdir /s
+            r"\b(format|mkfs|diskpart)\b",   # disk operations
+            r"\bdd\s+if=",                   # dd
+            r">\s*/dev/sd",                  # write to disk
+            r"\b(shutdown|reboot|poweroff)\b",  # system power
+            r":\(\)\s*\{.*\};\s*:",          # fork bomb
+        ]
+        self.allow_patterns = allow_patterns or []
+        self.restrict_to_workspace = restrict_to_workspace
     
     @property
     def name(self) -> str:
@@ -41,6 +62,9 @@ class ExecTool(Tool):
     
     async def execute(self, command: str, working_dir: str | None = None, **kwargs: Any) -> str:
         cwd = working_dir or self.working_dir or os.getcwd()
+        guard_error = self._guard_command(command, cwd)
+        if guard_error:
+            return guard_error
         
         try:
             process = await asyncio.create_subprocess_shell(
@@ -83,3 +107,35 @@ class ExecTool(Tool):
             
         except Exception as e:
             return f"执行命令错误：{str(e)}"
+
+    def _guard_command(self, command: str, cwd: str) -> str | None:
+        """对潜在危险命令的最佳努力安全守卫。"""
+        cmd = command.strip()
+        lower = cmd.lower()
+
+        for pattern in self.deny_patterns:
+            if re.search(pattern, lower):
+                return "错误：命令被安全守卫阻止（检测到危险模式）"
+
+        if self.allow_patterns:
+            if not any(re.search(p, lower) for p in self.allow_patterns):
+                return "错误：命令被安全守卫阻止（不在允许列表中）"
+
+        if self.restrict_to_workspace:
+            if "..\\" in cmd or "../" in cmd:
+                return "错误：命令被安全守卫阻止（检测到路径遍历）"
+
+            cwd_path = Path(cwd).resolve()
+
+            win_paths = re.findall(r"[A-Za-z]:\\[^\\\"']+", cmd)
+            posix_paths = re.findall(r"/[^\s\"']+", cmd)
+
+            for raw in win_paths + posix_paths:
+                try:
+                    p = Path(raw).resolve()
+                except Exception:
+                    continue
+                if cwd_path not in p.parents and p != cwd_path:
+                    return "错误：命令被安全守卫阻止（路径在工作目录外）"
+
+        return None

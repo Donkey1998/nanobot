@@ -2,6 +2,7 @@
 
 import base64
 import mimetypes
+import platform
 from pathlib import Path
 from typing import Any
 
@@ -76,6 +77,8 @@ available="false" 的技能需要先安装依赖项 - 你可以尝试使用 apt/
         from datetime import datetime
         now = datetime.now().strftime("%Y-%m-%d %H:%M (%A)")
         workspace_path = str(self.workspace.expanduser().resolve())
+        system = platform.system()
+        runtime = f"{'macOS' if system == 'Darwin' else system} {platform.machine()}, Python {platform.python_version()}"
         
         return f"""# nanobot 🐈
 
@@ -88,6 +91,9 @@ available="false" 的技能需要先安装依赖项 - 你可以尝试使用 apt/
 
 ## 当前时间
 {now}
+
+## 运行环境
+{runtime}
 
 ## 工作区
 你的工作区位于：{workspace_path}
@@ -120,6 +126,8 @@ available="false" 的技能需要先安装依赖项 - 你可以尝试使用 apt/
         current_message: str,
         skill_names: list[str] | None = None,
         media: list[str] | None = None,
+        channel: str | None = None,
+        chat_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """
         为 LLM 调用构建完整的消息列表。
@@ -129,6 +137,8 @@ available="false" 的技能需要先安装依赖项 - 你可以尝试使用 apt/
             current_message: 新的用户消息。
             skill_names: 要包含的可选技能。
             media: 图像/媒体的本地文件路径的可选列表。
+            channel: 当前渠道（telegram、feishu 等）。
+            chat_id: 当前聊天/用户 ID。
 
         Returns:
             包括系统提示的消息列表。
@@ -137,6 +147,8 @@ available="false" 的技能需要先安装依赖项 - 你可以尝试使用 apt/
 
         # System prompt
         system_prompt = self.build_system_prompt(skill_names)
+        if channel and chat_id:
+            system_prompt += f"\n\n## Current Session\nChannel: {channel}\nChat ID: {chat_id}"
         messages.append({"role": "system", "content": system_prompt})
 
         # History

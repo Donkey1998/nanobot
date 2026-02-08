@@ -55,6 +55,28 @@ class ChannelManager:
                 logger.info("WhatsApp 渠道已启用")
             except ImportError as e:
                 logger.warning(f"WhatsApp 渠道不可用：{e}")
+
+        # Discord channel
+        if self.config.channels.discord.enabled:
+            try:
+                from nanobot.channels.discord import DiscordChannel
+                self.channels["discord"] = DiscordChannel(
+                    self.config.channels.discord, self.bus
+                )
+                logger.info("Discord 渠道已启用")
+            except ImportError as e:
+                logger.warning(f"Discord 渠道不可用：{e}")
+
+        # Feishu channel
+        if self.config.channels.feishu.enabled:
+            try:
+                from nanobot.channels.feishu import FeishuChannel
+                self.channels["feishu"] = FeishuChannel(
+                    self.config.channels.feishu, self.bus
+                )
+                logger.info("Feishu 渠道已启用")
+            except ImportError as e:
+                logger.warning(f"Feishu 渠道不可用：{e}")
     
     async def start_all(self) -> None:
         """启动 WhatsApp 渠道和出站分发器。"""

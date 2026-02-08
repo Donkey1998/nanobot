@@ -51,9 +51,13 @@ class ToolRegistry:
         """
         tool = self._tools.get(name)
         if not tool:
-            return f"错误: 未找到工具 '{name}'"
-        
+            return f"错误：未找到工具 '{name}'"
+
+
         try:
+            errors = tool.validate_params(params)
+            if errors:
+                return f"错误：工具 '{name}' 的参数无效：" + "; ".join(errors)
             return await tool.execute(**params)
         except Exception as e:
             return f"执行 {name} 时出错: {str(e)}"

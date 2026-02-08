@@ -17,3 +17,6 @@ docs/
 __pycache__/
 poetry.lock
 .pytest_cache/
+
+# Claude Code local settings
+.claude/settings.local.json

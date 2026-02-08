@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(powershell -Command \"echo $env:USERPROFILE\")"
+      "Bash(powershell -Command \"echo $env:USERPROFILE\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git restore:*)"
     ]
   }
 }

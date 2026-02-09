@@ -1,4 +1,4 @@
-"""Browser session management."""
+"""浏览器会话管理。"""
 
 import asyncio
 from pathlib import Path
@@ -10,18 +10,18 @@ from nanobot.browser.permissions import require_domain_allowed
 
 
 class BrowserTimeoutError(Exception):
-    """Raised when browser operation times out."""
+    """当浏览器操作超时时抛出。"""
 
     pass
 
 
 class BrowserSession:
-    """Manage a browser session with persistent profile.
+    """管理具有持久配置文件的浏览器会话。
 
-    Each session maintains its own browser context with separate cookies,
-    localStorage, etc. Sessions are persisted to disk based on domain.
+    每个会话维护自己的浏览器上下文,具有单独的 cookies、
+    localStorage 等。会话基于域持久化到磁盘。
 
-    Example:
+    示例:
         >>> async with BrowserSession(config) as session:
         ...     await session.navigate("https://mail.qq.com")
         ...     snapshot = await session.snapshot()
@@ -35,14 +35,14 @@ class BrowserSession:
         profile_dir: str | Path | None = None,
         user_data_dir: str | Path | None = None,
     ) -> None:
-        """Initialize browser session.
+        """初始化浏览器会话。
 
         Args:
-            allowed_domains: Whitelist of allowed domain patterns
-            headless: Run browser in headless mode (no GUI)
-            timeout: Default timeout for operations (milliseconds)
-            profile_dir: Base directory for browser profiles (default: ~/.nanobot/browser-profiles/)
-            user_data_dir: Specific user data directory for this session (optional)
+            allowed_domains: 允许的域模式白名单
+            headless: 在无头模式下运行浏览器(无 GUI)
+            timeout: 操作的默认超时时间(毫秒)
+            profile_dir: 浏览器配置文件的基本目录(默认: ~/.nanobot/browser-profiles/)
+            user_data_dir: 此会话的特定用户数据目录(可选)
         """
         self.allowed_domains = allowed_domains
         self.headless = headless
@@ -58,14 +58,14 @@ class BrowserSession:
 
     @property
     def is_started(self) -> bool:
-        """Check if browser session is started."""
+        """检查浏览器会话是否已启动。"""
         return self._started
 
     async def start(self) -> None:
-        """Start browser session.
+        """启动浏览器会话。
 
         Raises:
-            BrowserTimeoutError: If browser fails to start within timeout
+            BrowserTimeoutError: 如果浏览器在超时内未能启动
         """
         if self._started:
             return
@@ -83,7 +83,7 @@ class BrowserSession:
                 timeout=self.timeout / 1000,
             )
 
-            # Create context with persistent storage if specified
+            # 创建具有持久存储的上下文(如果指定)
             context_args: dict = {}
             if self._user_data_dir:
                 self._user_data_dir.mkdir(parents=True, exist_ok=True)
@@ -98,9 +98,9 @@ class BrowserSession:
             raise BrowserTimeoutError("Failed to start browser within timeout") from exc
 
     async def stop(self) -> None:
-        """Stop browser session and save state.
+        """停止浏览器会话并保存状态。
 
-        Closes browser and persists cookies, localStorage, etc.
+        关闭浏览器并持久化 cookies、localStorage 等。
         """
         if not self._started:
             return
@@ -119,12 +119,12 @@ class BrowserSession:
         self._started = False
 
     async def __aenter__(self) -> "BrowserSession":
-        """Async context manager entry."""
+        """异步上下文管理器入口。"""
         await self.start()
         return self
 
     async def __aexit__(self, *args) -> None:
-        """Async context manager exit."""
+        """异步上下文管理器出口。"""
         await self.stop()
 
     async def navigate(
@@ -132,36 +132,36 @@ class BrowserSession:
         url: str,
         wait_until: Literal["load", "domcontentloaded", "networkidle"] = "load",
     ) -> None:
-        """Navigate to URL.
+        """导航到 URL。
 
         Args:
-            url: URL to navigate to
-            wait_until: When to consider navigation succeeded
+            url: 要导航到的 URL
+            wait_until: 何时认为导航成功
 
         Raises:
-            PermissionDenied: If URL domain is not in whitelist
-            BrowserTimeoutError: If navigation times out
+            PermissionDenied: 如果 URL 域不在白名单中
+            BrowserTimeoutError: 如果导航超时
         """
         if not self._started:
             raise RuntimeError("Browser session not started. Call start() first.")
 
-        # Check permissions
+        # 检查权限
         require_domain_allowed(url, self.allowed_domains)
 
         try:
-            # Navigate with explicit timeout (Playwright uses milliseconds)
+            # 使用显式超时导航(Playwright 使用毫秒)
             await self._page.goto(url, wait_until=wait_until, timeout=self.timeout)
         except Exception as exc:
-            # Playwright's TimeoutError has different message format
+            # Playwright 的 TimeoutError 具有不同的消息格式
             if "Timeout" in str(exc):
                 raise BrowserTimeoutError(f"Navigation to {url} timed out") from exc
             raise
 
     async def wait_for_load_state(self, state: Literal["load", "domcontentloaded", "networkidle"] = "networkidle") -> None:
-        """Wait for specific load state.
+        """等待特定的加载状态。
 
         Args:
-            state: Load state to wait for
+            state: 要等待的加载状态
         """
         if not self._page:
             raise RuntimeError("Browser session not started")
@@ -170,13 +170,13 @@ class BrowserSession:
 
     @property
     def page(self) -> Page:
-        """Get the active page object.
+        """获取活动页面对象。
 
         Returns:
-            Playwright Page object
+            Playwright Page 对象
 
         Raises:
-            RuntimeError: If session not started
+            RuntimeError: 如果会话未启动
         """
         if not self._page:
             raise RuntimeError("Browser session not started")
@@ -184,13 +184,13 @@ class BrowserSession:
 
     @property
     def context(self) -> BrowserContext:
-        """Get the browser context.
+        """获取浏览器上下文。
 
         Returns:
-            Playwright BrowserContext object
+            Playwright BrowserContext 对象
 
         Raises:
-            RuntimeError: If session not started
+            RuntimeError: 如果会话未启动
         """
         if not self._context:
             raise RuntimeError("Browser session not started")
@@ -198,14 +198,14 @@ class BrowserSession:
 
     @classmethod
     def get_profile_path(cls, domain: str, base_dir: str | Path | None = None) -> Path:
-        """Get the profile path for a specific domain.
+        """获取特定域的配置文件路径。
 
         Args:
-            domain: Domain name (e.g., "mail.qq.com")
-            base_dir: Base directory for profiles (default: ~/.nanobot/browser-profiles/)
+            domain: 域名(例如 "mail.qq.com")
+            base_dir: 配置文件的基本目录(默认: ~/.nanobot/browser-profiles/)
 
         Returns:
-            Path to profile directory
+            配置文件目录的路径
         """
         base = Path(base_dir) if base_dir else Path.home() / ".nanobot" / "browser-profiles"
         return base / domain

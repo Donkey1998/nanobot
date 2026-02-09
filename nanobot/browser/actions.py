@@ -1,4 +1,4 @@
-"""Browser actions for interacting with pages."""
+"""用于与页面交互的浏览器操作。"""
 
 from typing import Any
 
@@ -8,7 +8,7 @@ from nanobot.browser.session import BrowserTimeoutError
 
 
 class ElementNotFoundError(Exception):
-    """Raised when an element cannot be found on the page."""
+    """当页面上找不到元素时抛出。"""
 
     def __init__(self, locator: str, reason: str = "Element not found") -> None:
         self.locator = locator
@@ -17,7 +17,7 @@ class ElementNotFoundError(Exception):
 
 
 class ElementNotInteractableError(Exception):
-    """Raised when an element is found but not interactable."""
+    """当元素找到但无法交互时抛出。"""
 
     def __init__(self, locator: str, reason: str = "Element not interactable") -> None:
         self.locator = locator
@@ -26,16 +26,16 @@ class ElementNotInteractableError(Exception):
 
 
 class BrowserActions:
-    """Execute browser actions like click, type, wait, etc.
+    """执行浏览器操作,如点击、输入、等待等。
 
-    Supports multiple element location strategies:
-    - ARIA labels (most stable for dynamic apps)
-    - id attribute
-    - data-testid attribute
-    - CSS selectors
-    - Text content
+    支持多种元素定位策略:
+    - ARIA 标签(对于动态应用最稳定)
+    - id 属性
+    - data-testid 属性
+    - CSS 选择器
+    - 文本内容
 
-    Example:
+    示例:
         >>> actions = BrowserActions(page, timeout=30000)
         >>> await actions.click("Login button")
         >>> await actions.type("Email input", "user@example.com")
@@ -43,11 +43,11 @@ class BrowserActions:
     """
 
     def __init__(self, page: Page, timeout: int = 30000) -> None:
-        """Initialize browser actions.
+        """初始化浏览器操作。
 
         Args:
-            page: Playwright Page object
-            timeout: Default timeout for operations (milliseconds)
+            page: Playwright Page 对象
+            timeout: 操作的默认超时时间(毫秒)
         """
         self.page = page
         self.timeout = timeout
@@ -58,17 +58,17 @@ class BrowserActions:
         strategy: str = "auto",
         wait_for_navigation: bool = True,
     ) -> None:
-        """Click an element on the page.
+        """点击页面上的元素。
 
         Args:
-            locator: Element identifier (depends on strategy)
-            strategy: Location strategy: "auto", "aria", "id", "testid", "css", "text"
-            wait_for_navigation: Wait for navigation after click
+            locator: 元素标识符(取决于策略)
+            strategy: 定位策略: "auto", "aria", "id", "testid", "css", "text"
+            wait_for_navigation: 点击后是否等待导航
 
         Raises:
-            ElementNotFoundError: If element not found
-            ElementNotInteractableError: If element not interactable
-            BrowserTimeoutError: If operation times out
+            ElementNotFoundError: 如果找不到元素
+            ElementNotInteractableError: 如果元素无法交互
+            BrowserTimeoutError: 如果操作超时
         """
         element = await self._find_element(locator, strategy)
 
@@ -88,17 +88,17 @@ class BrowserActions:
         strategy: str = "auto",
         clear_first: bool = True,
     ) -> None:
-        """Type text into an input field.
+        """在输入字段中输入文本。
 
         Args:
-            locator: Element identifier
-            text: Text to type
-            strategy: Location strategy
-            clear_first: Clear existing text before typing
+            locator: 元素标识符
+            text: 要输入的文本
+            strategy: 定位策略
+            clear_first: 输入前是否清除现有文本
 
         Raises:
-            ElementNotFoundError: If element not found
-            BrowserTimeoutError: If operation times out
+            ElementNotFoundError: 如果找不到元素
+            BrowserTimeoutError: 如果操作超时
         """
         element = await self._find_element(locator, strategy)
 
@@ -106,7 +106,7 @@ class BrowserActions:
             if clear_first:
                 await element.clear(timeout=self.timeout / 1000)
 
-            # Type with proper events to ensure frameworks capture input
+            # 使用正确的事件输入,确保框架捕获输入
             await element.fill(text, timeout=self.timeout / 1000)
             await element.dispatch_event("input")
             await element.dispatch_event("change")
@@ -120,15 +120,15 @@ class BrowserActions:
         strategy: str = "auto",
         state: str = "visible",
     ) -> None:
-        """Wait for an element to appear on the page.
+        """等待元素出现在页面上。
 
         Args:
-            locator: Element identifier
-            strategy: Location strategy
-            state: Element state: "visible", "attached", "hidden", "detached"
+            locator: 元素标识符
+            strategy: 定位策略
+            state: 元素状态: "visible", "attached", "hidden", "detached"
 
         Raises:
-            BrowserTimeoutError: If element doesn't appear within timeout
+            BrowserTimeoutError: 如果元素在超时时间内未出现
         """
         selector = self._build_selector(locator, strategy)
 
@@ -146,40 +146,40 @@ class BrowserActions:
         locator: str,
         strategy: str = "auto",
     ) -> str:
-        """Extract text content from an element.
+        """从元素中提取文本内容。
 
         Args:
-            locator: Element identifier
-            strategy: Location strategy
+            locator: 元素标识符
+            strategy: 定位策略
 
         Returns:
-            Text content (whitespace trimmed)
+            文本内容(去除空白)
 
         Raises:
-            ElementNotFoundError: If element not found
-            BrowserTimeoutError: If operation times out
+            ElementNotFoundError: 如果找不到元素
+            BrowserTimeoutError: 如果操作超时
         """
         element = await self._find_element(locator, strategy)
 
         try:
             text = await element.inner_text(timeout=self.timeout / 1000)
-            return " ".join(text.split())  # Trim whitespace
+            return " ".join(text.split())  # 去除空白
         except PlaywrightTimeoutError as exc:
             raise BrowserTimeoutError(f"Get text from '{locator}' timed out") from exc
 
     async def _find_element(self, locator: str, strategy: str):
-        """Find an element using the specified strategy.
+        """使用指定策略查找元素。
 
         Args:
-            locator: Element identifier
-            strategy: Location strategy
+            locator: 元素标识符
+            strategy: 定位策略
 
         Returns:
             Playwright ElementHandle
 
         Raises:
-            ElementNotFoundError: If element not found
-            BrowserTimeoutError: If search times out
+            ElementNotFoundError: 如果找不到元素
+            BrowserTimeoutError: 如果搜索超时
         """
         selector = self._build_selector(locator, strategy)
 
@@ -190,7 +190,7 @@ class BrowserActions:
                 timeout=self.timeout / 1000,
             )
         except PlaywrightTimeoutError as exc:
-            # Provide helpful error message
+            # 提供有用的错误消息
             raise ElementNotFoundError(
                 locator,
                 f"Could not find element using {strategy} strategy",
@@ -202,17 +202,17 @@ class BrowserActions:
         return element
 
     def _build_selector(self, locator: str, strategy: str) -> str:
-        """Build a CSS selector from locator and strategy.
+        """从定位符和策略构建 CSS 选择器。
 
         Args:
-            locator: Element identifier
-            strategy: Location strategy
+            locator: 元素标识符
+            strategy: 定位策略
 
         Returns:
-            CSS selector string
+            CSS 选择器字符串
         """
         if strategy == "aria":
-            # ARIA label: [aria-label="Login"]
+            # ARIA 标签: [aria-label="Login"]
             return f'[aria-label="{locator}"]'
         elif strategy == "id":
             # ID: #login-button
@@ -221,29 +221,29 @@ class BrowserActions:
             # data-testid: [data-testid="login-button"]
             return f'[data-testid="{locator}"]'
         elif strategy == "text":
-            # Text content: :text("Login")
+            # 文本内容: :text("Login")
             return f':text("{locator}")'
         elif strategy == "css":
-            # Direct CSS selector
+            # 直接 CSS 选择器
             return locator
         elif strategy == "auto":
-            # Try multiple strategies in order
+            # 按顺序尝试多种策略
             return self._auto_selector(locator)
         else:
             raise ValueError(f"Unknown strategy: {strategy}")
 
     def _auto_selector(self, locator: str) -> str:
-        """Auto-detect the best selector strategy.
+        """自动检测最佳选择器策略。
 
         Args:
-            locator: Element identifier
+            locator: 元素标识符
 
         Returns:
-            CSS selector
+            CSS 选择器
         """
-        # If it looks like CSS (contains ., #, [), >, +, ~)
+        # 如果看起来像 CSS (包含 ., #, [, >, +, ~, :)
         if any(c in locator for c in [".", "#", "[", ">", "+", "~", ":"]):
             return locator
 
-        # Try aria-label first (most stable for dynamic apps)
+        # 首先尝试 aria-label(对于动态应用最稳定)
         return f'[aria-label="{locator}"], [data-testid="{locator}"], #{locator}, :text("{locator}")'

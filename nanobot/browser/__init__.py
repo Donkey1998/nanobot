@@ -1,4 +1,4 @@
-"""Browser automation module for nanobot."""
+"""Nanobot 浏览器自动化模块。"""
 
 from nanobot.browser.session import BrowserSession
 from nanobot.browser.snapshot import PageSnapshot

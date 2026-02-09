@@ -1,4 +1,4 @@
-"""Generic login adapter using heuristic rules."""
+"""使用启发式规则的通用登录适配器。"""
 
 import asyncio
 
@@ -7,22 +7,22 @@ from nanobot.browser.adapters.base import WebsiteAdapter, LoginResult
 
 
 class GenericLoginAdapter(WebsiteAdapter):
-    """Generic login adapter that works with standard login forms.
+    """适用于标准登录表单的通用登录适配器。
 
-    Uses heuristic rules to find and fill login forms. Works with about
-    60-70% of standard username/password login forms.
+    使用启发式规则查找和填写登录表单。适用于大约
+    60-70% 的标准用户名/密码登录表单。
 
-    Heuristics:
-    - Find form with password field
-    - Find username/email field before password
-    - Find submit button with "login"/"sign in" text
+    启发式:
+    - 查找具有密码字段的表单
+    - 在密码之前查找用户名/电子邮件字段
+    - 查找具有 "login"/"sign in" 文本的提交按钮
     """
 
     NAME = "generic"
-    DOMAINS = []  # No specific domains - used as fallback
+    DOMAINS = []  # 没有特定域 - 用作后备
     DISPLAY_NAME = "Generic Login"
 
-    # Patterns for identifying login elements
+    # 用于识别登录元素的模式
     USERNAME_SELECTORS = [
         'input[type="text"]',
         'input[type="email"]',
@@ -56,12 +56,12 @@ class GenericLoginAdapter(WebsiteAdapter):
         username: str | None = None,
         password: str | None = None,
     ) -> LoginResult:
-        """Attempt login using generic heuristics.
+        """使用通用启发式尝试登录。
 
         Args:
-            session: Browser session
-            username: Username (if None, request it)
-            password: Password (if None, request it)
+            session: 浏览器会话
+            username: 用户名(如果为 None 则请求)
+            password: 密码(如果为 None 则请求)
 
         Returns:
             LoginResult
@@ -72,7 +72,7 @@ class GenericLoginAdapter(WebsiteAdapter):
         actions = BrowserActions(session.page, timeout=session.timeout)
 
         try:
-            # Step 1: Find password field (anchor element)
+            # 步骤 1: 查找密码字段(锚定元素)
             password_field = await self._find_password_field(actions)
             if password_field is None:
                 return LoginResult.failed(
@@ -80,7 +80,7 @@ class GenericLoginAdapter(WebsiteAdapter):
                     suggested_strategy="manual",
                 )
 
-            # Step 2: Find username field
+            # 步骤 2: 查找用户名字段
             username_field = await self._find_username_field(actions)
             if username_field is None:
                 return LoginResult.failed(
@@ -88,16 +88,16 @@ class GenericLoginAdapter(WebsiteAdapter):
                     suggested_strategy="manual",
                 )
 
-            # Step 3: Fill credentials
+            # 步骤 3: 填写凭据
             await actions.type_text("username_field", username, strategy="css")
-            await asyncio.sleep(0.1)  # Small delay
+            await asyncio.sleep(0.1)  # 小延迟
             await actions.type_text("password_field", password, strategy="css")
             await asyncio.sleep(0.1)
 
-            # Step 4: Check for "remember me" checkbox
+            # 步骤 4: 检查"记住我"复选框
             await self._check_remember_me(actions)
 
-            # Step 5: Find and click submit button
+            # 步骤 5: 查找并点击提交按钮
             submit_clicked = await self._click_submit(actions)
 
             if not submit_clicked:
@@ -106,14 +106,14 @@ class GenericLoginAdapter(WebsiteAdapter):
                     suggested_strategy="manual",
                 )
 
-            # Step 6: Wait for navigation
+            # 步骤 6: 等待导航
             await asyncio.sleep(2)
 
-            # Step 7: Verify login
+            # 步骤 7: 验证登录
             if await self.verify_login(session):
                 return LoginResult.success()
             else:
-                # Check for error messages
+                # 检查错误消息
                 error = await self._check_error_messages(actions)
                 if error:
                     return LoginResult.failed(f"Login failed: {error}")
@@ -126,7 +126,7 @@ class GenericLoginAdapter(WebsiteAdapter):
             return LoginResult.failed(f"Generic login error: {e}")
 
     async def _find_password_field(self, actions: BrowserActions):
-        """Find the password input field."""
+        """查找密码输入字段。"""
         for selector in self.PASSWORD_SELECTORS:
             try:
                 await actions.wait_for_element(selector, state="attached", strategy="css")
@@ -136,7 +136,7 @@ class GenericLoginAdapter(WebsiteAdapter):
         return None
 
     async def _find_username_field(self, actions: BrowserActions):
-        """Find the username/email input field."""
+        """查找用户名/电子邮件输入字段。"""
         for selector in self.USERNAME_SELECTORS:
             try:
                 await actions.wait_for_element(selector, state="attached", strategy="css")
@@ -146,7 +146,7 @@ class GenericLoginAdapter(WebsiteAdapter):
         return None
 
     async def _check_remember_me(self, actions: BrowserActions):
-        """Check and click "remember me" checkbox if present."""
+        """检查并点击"记住我"复选框(如果存在)。"""
         remember_selectors = [
             'input[type="checkbox"][name*="remember" i]',
             'input[type="checkbox"][id*="remember" i]',
@@ -157,7 +157,7 @@ class GenericLoginAdapter(WebsiteAdapter):
         for selector in remember_selectors:
             try:
                 await actions.wait_for_element(selector, state="attached", strategy="css")
-                # Check if not already checked
+                # 检查是否尚未选中
                 checked = await actions.page.query_selector(selector + ":not(:checked)")
                 if checked:
                     await actions.click(selector, strategy="css")
@@ -166,7 +166,7 @@ class GenericLoginAdapter(WebsiteAdapter):
                 continue
 
     async def _click_submit(self, actions: BrowserActions) -> bool:
-        """Find and click the submit button."""
+        """查找并点击提交按钮。"""
         for selector in self.SUBMIT_SELECTORS:
             try:
                 await actions.wait_for_element(selector, state="visible", strategy="css")
@@ -177,7 +177,7 @@ class GenericLoginAdapter(WebsiteAdapter):
         return False
 
     async def _check_error_messages(self, actions: BrowserActions) -> str | None:
-        """Check for login error messages on the page."""
+        """检查页面上的登录错误消息。"""
         error_selectors = [
             ".error",
             ".alert-error",
@@ -198,5 +198,5 @@ class GenericLoginAdapter(WebsiteAdapter):
 
     @classmethod
     def get_priority(cls) -> int:
-        """Generic adapter has lowest priority."""
+        """通用适配器具有最低优先级。"""
         return 0

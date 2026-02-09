@@ -1,4 +1,4 @@
-"""Manual login support - user completes login in browser."""
+"""手动登录支持 - 用户在浏览器中完成登录。"""
 
 import asyncio
 
@@ -7,15 +7,15 @@ from nanobot.browser.session import BrowserSession
 
 
 class ManualLoginAdapter(WebsiteAdapter):
-    """Manual login adapter - opens browser for user to complete login.
+    """手动登录适配器 - 打开浏览器供用户完成登录。
 
-    Used as final fallback when automated login fails.
-    Opens the browser window (non-headless) and waits for user to
-    manually complete login.
+    用作自动登录失败时的最终后备。
+    打开浏览器窗口(非无头模式)并等待用户
+    手动完成登录。
     """
 
     NAME = "manual"
-    DOMAINS = []  # Fallback adapter
+    DOMAINS = []  # 后备适配器
     DISPLAY_NAME = "Manual Login"
 
     async def login(
@@ -25,71 +25,71 @@ class ManualLoginAdapter(WebsiteAdapter):
         password: str | None = None,
         login_url: str | None = None,
     ) -> LoginResult:
-        """Open browser for manual login.
+        """打开浏览器进行手动登录。
 
         Args:
-            session: Browser session (will be made non-headless if needed)
-            username: Not used for manual login
-            password: Not used for manual login
-            login_url: URL to open for login (defaults to current page)
+            session: 浏览器会话(如果需要将变为非无头模式)
+            username: 不用于手动登录
+            password: 不用于手动登录
+            login_url: 打开登录的 URL(默认为当前页面)
 
         Returns:
-            LoginResult after user confirms login complete
+            用户确认登录完成后的 LoginResult
         """
-        # Make sure browser is visible
+        # 确保浏览器可见
         if session.headless:
             return LoginResult.failed(
                 "Cannot use manual login in headless mode. Please disable headless mode in config.",
             )
 
-        # Navigate to login URL if provided
+        # 如果提供,导航到登录 URL
         if login_url:
             await session.navigate(login_url)
 
-        # Wait for user to complete login
-        # In a real implementation, this would show a prompt in the UI
-        # For now, we'll wait for login verification
+        # 等待用户完成登录
+        # 在实际实现中,这会在 UI 中显示提示
+        # 目前,我们将等待登录验证
         return await self._wait_for_manual_login(session)
 
     async def _wait_for_manual_login(self, session: BrowserSession) -> LoginResult:
-        """Wait for user to complete manual login.
+        """等待用户完成手动登录。
 
-        Detects login completion by:
-        - URL change away from login pages
-        - Appearance of logged-in elements
-        - User confirmation
+        通过以下方式检测登录完成:
+        - URL 从登录页更改
+        - 登录元素的出现
+        - 用户确认
 
         Returns:
             LoginResult
         """
-        # Poll for login completion (up to 5 minutes)
-        max_attempts = 300  # 5 minutes
-        check_interval = 1  # 1 second
+        # 轮询登录完成(最多 5 分钟)
+        max_attempts = 300  # 5 分钟
+        check_interval = 1  # 1 秒
 
         for i in range(max_attempts):
             await asyncio.sleep(check_interval)
 
-            # Check if login successful
+            # 检查登录是否成功
             if await self.verify_login(session):
                 return LoginResult.success("Manual login completed")
 
         return LoginResult.failed("Manual login timeout - please try again")
 
     async def verify_login(self, session: BrowserSession) -> bool:
-        """Verify manual login completion.
+        """验证手动登录完成。
 
-        Checks:
-        - URL doesn't contain login indicators
-        - No error messages visible
+        检查:
+        - URL 不包含登录指示符
+        - 没有可见的错误消息
         """
         url = session.page.url.lower()
         login_indicators = ["/login", "/signin", "/auth", "/sign_in"]
 
-        # Still on login page
+        # 仍在登录页上
         if any(indicator in url for indicator in login_indicators):
             return False
 
-        # Check for error messages
+        # 检查错误消息
         try:
             error_elements = await session.page.query_selector_all('.error, .alert-error, [role="alert"]')
             for elem in error_elements:
@@ -99,10 +99,10 @@ class ManualLoginAdapter(WebsiteAdapter):
         except Exception:
             pass
 
-        # Assume success if not on login page and no errors
+        # 如果不在登录页且没有错误,则假定成功
         return True
 
     @classmethod
     def get_priority(cls) -> int:
-        """Manual login has lowest priority."""
+        """手动登录具有最低优先级。"""
         return -1

@@ -1,4 +1,4 @@
-"""Adapter registry for managing website login adapters."""
+"""用于管理网站登录适配器的适配器注册表。"""
 
 from typing import TYPE_CHECKING, Type
 
@@ -9,16 +9,16 @@ if TYPE_CHECKING:
     from nanobot.browser.adapters.qq_mail import QQMailAdapter
 
 
-# Global registry instance
+# 全局注册表实例
 _registry: list[Type[WebsiteAdapter]] = []
 
 
 class AdapterRegistry:
-    """Registry for website login adapters.
+    """网站登录适配器的注册表。
 
-    Manages available adapters and finds the best match for a domain.
+    管理可用适配器并为域查找最佳匹配。
 
-    Example:
+    示例:
         >>> registry = get_adapter_registry()
         >>> adapter = registry.find_adapter("mail.qq.com")
         >>> if adapter:
@@ -26,65 +26,65 @@ class AdapterRegistry:
     """
 
     def __init__(self) -> None:
-        """Initialize registry."""
+        """初始化注册表。"""
         self._adapters: list[Type[WebsiteAdapter]] = []
 
     def register(self, adapter_class: Type[WebsiteAdapter]) -> None:
-        """Register an adapter class.
+        """注册适配器类。
 
         Args:
-            adapter_class: Adapter class to register
+            adapter_class: 要注册的适配器类
         """
         if adapter_class not in self._adapters:
             self._adapters.append(adapter_class)
-            # Sort by priority (highest first)
+            # 按优先级排序(最高优先)
             self._adapters.sort(key=lambda a: a.get_priority(), reverse=True)
 
     def find_adapter(self, domain: str) -> Type[WebsiteAdapter] | None:
-        """Find the best adapter for a domain.
+        """查找域的最佳适配器。
 
         Args:
-            domain: Domain to find adapter for
+            domain: 查找适配器的域
 
         Returns:
-            Adapter class or None if no match found
+            适配器类,如果未找到匹配则返回 None
         """
         for adapter_class in self._adapters:
-            # Check if domain matches any pattern
+            # 检查域是否匹配任何模式
             from nanobot.browser.permissions import normalize_domain
             normalized_domain = normalize_domain(domain)
 
             for pattern in adapter_class.DOMAINS:
                 pattern_normalized = normalize_domain(pattern)
 
-                # Handle wildcard
+                # 处理通配符
                 if pattern_normalized.startswith("*."):
                     import fnmatch
                     if fnmatch.fnmatch(normalized_domain, pattern_normalized):
                         return adapter_class
                 else:
-                    # Exact match
+                    # 精确匹配
                     if normalized_domain == pattern_normalized:
                         return adapter_class
 
         return None
 
     def list_adapters(self) -> list[Type[WebsiteAdapter]]:
-        """List all registered adapters.
+        """列出所有已注册的适配器。
 
         Returns:
-            List of adapter classes
+            适配器类列表
         """
         return list(self._adapters)
 
     def create_adapter(self, domain: str) -> WebsiteAdapter | None:
-        """Create an adapter instance for a domain.
+        """为域创建适配器实例。
 
         Args:
-            domain: Domain to create adapter for
+            domain: 创建适配器的域
 
         Returns:
-            Adapter instance or None if no match
+            适配器实例,如果未找到匹配则返回 None
         """
         adapter_class = self.find_adapter(domain)
         if adapter_class:
@@ -92,15 +92,15 @@ class AdapterRegistry:
         return None
 
 
-# Global registry instance
+# 全局注册表实例
 _global_registry: AdapterRegistry | None = None
 
 
 def get_adapter_registry() -> AdapterRegistry:
-    """Get the global adapter registry.
+    """获取全局适配器注册表。
 
     Returns:
-        Global registry instance
+        全局注册表实例
     """
     global _global_registry
     if _global_registry is None:
@@ -110,26 +110,26 @@ def get_adapter_registry() -> AdapterRegistry:
 
 
 def _register_builtin_adapters(registry: AdapterRegistry) -> None:
-    """Register built-in adapters.
+    """注册内置适配器。
 
     Args:
-        registry: Registry to populate
+        registry: 要填充的注册表
     """
-    # Import here to avoid circular imports
+    # 在此处导入以避免循环导入
     from nanobot.browser.adapters.generic import GenericLoginAdapter
     from nanobot.browser.adapters.qq_mail import QQMailAdapter
 
-    registry.register(QQMailAdapter)  # Higher priority
-    registry.register(GenericLoginAdapter)  # Fallback
+    registry.register(QQMailAdapter)  # 较高优先级
+    registry.register(GenericLoginAdapter)  # 后备
 
 
 def register_custom_adapter(adapter_class: Type[WebsiteAdapter]) -> None:
-    """Register a custom adapter with the global registry.
+    """向全局注册表注册自定义适配器。
 
     Args:
-        adapter_class: Custom adapter class
+        adapter_class: 自定义适配器类
 
-    Example:
+    示例:
         >>> class MyMailAdapter(WebsiteAdapter):
         ...     NAME = "mymail"
         ...     DOMAINS = ["*.mymail.com"]

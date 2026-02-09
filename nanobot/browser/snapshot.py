@@ -1,4 +1,4 @@
-"""Page snapshot extraction for LLM consumption."""
+"""用于 LLM 消费的页面快照提取。"""
 
 import asyncio
 from typing import Any
@@ -9,74 +9,74 @@ from nanobot.browser.session import BrowserTimeoutError
 
 
 class PageSnapshot:
-    """Extract structured page snapshots for LLM understanding.
+    """为 LLM 理解提取结构化页面快照。
 
-    Uses Playwright's accessibility tree to get semantic page structure
-    with roles, labels, and states for interactive elements.
+    使用 Playwright 的可访问性树获取语义页面结构,
+    包括交互元素的角色、标签和状态。
 
-    Example:
+    示例:
         >>> snapshot = PageSnapshot(page)
         >>> tree = await snapshot.get_tree()
         >>> print(tree.to_text())
     """
 
     def __init__(self, page: Page, timeout: int = 30000) -> None:
-        """Initialize page snapshot.
+        """初始化页面快照。
 
         Args:
-            page: Playwright Page object
-            timeout: Timeout for snapshot operations (milliseconds)
+            page: Playwright Page 对象
+            timeout: 快照操作的超时时间(毫秒)
         """
         self.page = page
         self.timeout = timeout
 
     async def get_tree(self, wait_for_network_idle: bool = True) -> "AccessibilityNode":
-        """Get the accessibility tree of the current page.
+        """获取当前页面的可访问性树。
 
         Args:
-            wait_for_network_idle: Wait for network idle before snapshot (for dynamic content)
+            wait_for_network_idle: 在快照之前等待网络空闲(用于动态内容)
 
         Returns:
-            Root AccessibilityNode
+            根 AccessibilityNode
 
         Raises:
-            BrowserTimeoutError: If snapshot times out
+            BrowserTimeoutError: 如果快照超时
         """
-        # Wait for dynamic content
+        # 等待动态内容
         if wait_for_network_idle:
             try:
                 await self.page.wait_for_load_state("networkidle", timeout=self.timeout / 1000)
             except PlaywrightTimeoutError:
-                # Continue anyway - some pages never reach network idle
+                # 无论如何继续 - 某些页面永远不会达到网络空闲
                 pass
 
-        # Get accessibility tree - use try/except for compatibility
+        # 获取可访问性树 - 使用 try/except 以确保兼容性
         try:
-            # Try accessibility API first (if available)
+            # 首先尝试可访问性 API(如果可用)
             if hasattr(self.page, 'accessibility'):
                 tree = await asyncio.wait_for(
                     self.page.accessibility.snapshot(),
                     timeout=self.timeout / 1000,
                 )
             else:
-                # Fallback: create simple tree from page content
+                # 后备: 从页面内容创建简单树
                 tree = await self._create_simple_tree()
         except asyncio.TimeoutError as exc:
             raise BrowserTimeoutError("Failed to get page snapshot within timeout") from exc
         except Exception:
-            # If accessibility fails, create simple tree
+            # 如果可访问性失败,创建简单树
             tree = await self._create_simple_tree()
 
         return AccessibilityNode.from_playwright(tree)
 
     async def _create_simple_tree(self) -> dict:
-        """Create a simple accessibility-like tree from page content."""
+        """从页面内容创建简单的类似可访问性的树。"""
         try:
-            # Get page title and URL
+            # 获取页面标题和 URL
             title = await self.page.title()
             url = self.page.url
 
-            # Get all text content
+            # 获取所有文本内容
             text_content = await self.page.inner_text("body")
 
             return {
@@ -86,44 +86,44 @@ class PageSnapshot:
                 "children": [
                     {
                         "role": "text",
-                        "name": text_content[:1000],  # Limit text length
+                        "name": text_content[:1000],  # 限制文本长度
                     }
                 ]
             }
         except Exception:
-            # Ultimate fallback
+            # 终极后备
             return {
                 "role": "WebArea",
                 "name": "Page",
             }
 
     async def get_text(self, wait_for_network_idle: bool = True) -> str:
-        """Get a text representation of the page.
+        """获取页面的文本表示。
 
         Args:
-            wait_for_network_idle: Wait for network idle before snapshot
+            wait_for_network_idle: 在快照之前等待网络空闲
 
         Returns:
-            Formatted text representation of the page
+            页面的格式化文本表示
         """
         tree = await self.get_tree(wait_for_network_idle)
         return tree.to_text()
 
     async def get_interactive_elements(self, wait_for_network_idle: bool = True) -> list[dict[str, Any]]:
-        """Get all interactive elements from the page.
+        """从页面获取所有交互元素。
 
         Args:
-            wait_for_network_idle: Wait for network idle before snapshot
+            wait_for_network_idle: 在快照之前等待网络空闲
 
         Returns:
-            List of interactive elements with their attributes
+            交互元素列表及其属性
         """
         tree = await self.get_tree(wait_for_network_idle)
         return tree.get_interactive_elements()
 
 
 class AccessibilityNode:
-    """A node in the accessibility tree."""
+    """可访问性树中的节点。"""
 
     def __init__(
         self,
@@ -132,13 +132,13 @@ class AccessibilityNode:
         children: list["AccessibilityNode"] | None = None,
         **attributes: Any,
     ) -> None:
-        """Initialize accessibility node.
+        """初始化可访问性节点。
 
         Args:
-            role: ARIA role (e.g., "button", "link", "textbox")
-            name: Accessible name of the element
-            children: Child nodes
-            **attributes: Additional accessibility attributes
+            role: ARIA 角色(例如 "button", "link", "textbox")
+            name: 元素的可访问名称
+            children: 子节点
+            **attributes: 附加的可访问性属性
         """
         self.role = role
         self.name = name
@@ -147,10 +147,10 @@ class AccessibilityNode:
 
     @classmethod
     def from_playwright(cls, data: dict[str, Any] | None) -> "AccessibilityNode":
-        """Create node from Playwright accessibility snapshot.
+        """从 Playwright 可访问性快照创建节点。
 
         Args:
-            data: Playwright accessibility snapshot data
+            data: Playwright 可访问性快照数据
 
         Returns:
             AccessibilityNode
@@ -161,25 +161,25 @@ class AccessibilityNode:
         role = data.get("role", "unknown")
         name = data.get("name", "")
 
-        # Filter out decorative and hidden elements
+        # 过滤装饰性和隐藏元素
         ignored_roles = {"none", "presentation", "Generic"}
         if role in ignored_roles:
-            # Check if children have content
+            # 检查子项是否有内容
             if "children" in data and data["children"]:
-                # Return first meaningful child
+                # 返回第一个有意义的子项
                 for child_data in data["children"]:
                     child = cls.from_playwright(child_data)
                     if child.role != "unknown":
                         return child
             return cls(role="ignored", name=name)
 
-        # Extract useful attributes
+        # 提取有用的属性
         attributes = {}
         for key in ["checked", "expanded", "focused", "pressed", "selected", "disabled"]:
             if key in data:
                 attributes[key] = data[key]
 
-        # Build children
+        # 构建子项
         children = []
         if "children" in data:
             for child_data in data["children"]:
@@ -190,14 +190,14 @@ class AccessibilityNode:
         return cls(role=role, name=name, children=children, **attributes)
 
     def to_text(self, indent: int = 0, max_depth: int = 20) -> str:
-        """Convert node to text representation.
+        """将节点转换为文本表示。
 
         Args:
-            indent: Current indentation level
-            max_depth: Maximum depth to traverse
+            indent: 当前缩进级别
+            max_depth: 要遍历的最大深度
 
         Returns:
-            Text representation
+            文本表示
         """
         if max_depth <= 0:
             return ""
@@ -205,27 +205,27 @@ class AccessibilityNode:
         prefix = "  " * indent
         lines = []
 
-        # Add this node
+        # 添加此节点
         if self.role != "ignored":
             attr_str = ""
             if self.attributes:
                 attrs = [f"{k}={v}" for k, v in self.attributes.items()]
                 attr_str = f" [{', '.join(attrs)}]"
 
-            name = self.name.replace("\n", " ")[:50]  # Truncate long names
+            name = self.name.replace("\n", " ")[:50]  # 截断长名称
             lines.append(f"{prefix}{self.role}: {name}{attr_str}")
 
-        # Add children
+        # 添加子项
         for child in self.children:
             lines.append(child.to_text(indent + 1, max_depth - 1))
 
         return "\n".join(lines)
 
     def get_interactive_elements(self) -> list[dict[str, Any]]:
-        """Get all interactive elements in subtree.
+        """获取子树中的所有交互元素。
 
         Returns:
-            List of interactive elements
+            交互元素列表
         """
         interactive_roles = {
             "button", "link", "textbox", "searchbox", "textarea",
@@ -248,14 +248,14 @@ class AccessibilityNode:
         return elements
 
     def find_by_name(self, name: str, fuzzy: bool = False) -> "AccessibilityNode | None":
-        """Find a node by name.
+        """按名称查找节点。
 
         Args:
-            name: Name to search for
-            fuzzy: Use fuzzy matching (contains)
+            name: 要搜索的名称
+            fuzzy: 使用模糊匹配(包含)
 
         Returns:
-            Matching node or None
+            匹配的节点或 None
         """
         if self.name:
             if fuzzy and name.lower() in self.name.lower():
@@ -271,13 +271,13 @@ class AccessibilityNode:
         return None
 
     def find_by_role(self, role: str) -> list["AccessibilityNode"]:
-        """Find all nodes with a specific role.
+        """查找具有特定角色的所有节点。
 
         Args:
-            role: Role to search for
+            role: 要搜索的角色
 
         Returns:
-            List of matching nodes
+            匹配节点列表
         """
         nodes = []
 

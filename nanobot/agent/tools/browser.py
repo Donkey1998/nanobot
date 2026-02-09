@@ -1,4 +1,4 @@
-"""Browser automation tool for nanobot."""
+"""Nanobot 浏览器自动化工具。"""
 
 import json
 from pathlib import Path
@@ -14,23 +14,23 @@ from nanobot.config.schema import Config
 
 
 class BrowserTool(Tool):
-    """Browser automation tool for web interaction.
+    """浏览器自动化工具,用于网页交互。
 
-    Provides capabilities for:
-    - Starting/stopping browser sessions
-    - Navigating to URLs
-    - Taking page snapshots
-    - Clicking elements and typing text
-    - Performing login
+    提供以下功能:
+    - 启动/停止浏览器会话
+    - 导航到 URL
+    - 截取页面快照
+    - 点击元素和输入文本
+    - 执行登录
 
-    Requires `browser.enabled=true` in config.
+    需要在配置中设置 `browser.enabled=true`。
     """
 
     name = "browser"
     description = (
-        "Automated browser control. Navigate websites, take snapshots, "
-        "click elements, type text, and perform login. "
-        "Requires URLs to be in the configured whitelist."
+        "自动化浏览器控制。导航网站、截取快照、"
+        "点击元素、输入文本和执行登录。"
+        "URL 需要在配置的白名单中。"
     )
     parameters = {
         "type": "object",
@@ -38,47 +38,47 @@ class BrowserTool(Tool):
             "action": {
                 "type": "string",
                 "enum": ["start", "stop", "navigate", "snapshot", "click", "type", "login"],
-                "description": "Action to perform",
+                "description": "要执行的操作",
             },
-            "url": {"type": "string", "description": "URL for navigate or login actions"},
-            "locator": {"type": "string", "description": "Element locator for click/type actions"},
-            "text": {"type": "string", "description": "Text to type"},
+            "url": {"type": "string", "description": "导航或登录操作的 URL"},
+            "locator": {"type": "string", "description": "点击/输入操作的元素定位器"},
+            "text": {"type": "string", "description": "要输入的文本"},
             "strategy": {
                 "type": "string",
                 "enum": ["auto", "aria", "id", "testid", "css", "text"],
                 "default": "auto",
-                "description": "Element location strategy",
+                "description": "元素定位策略",
             },
             "loginStrategy": {
                 "type": "string",
                 "enum": ["auto", "adapter", "generic", "manual"],
                 "default": "auto",
-                "description": "Login strategy",
+                "description": "登录策略",
             },
-            "username": {"type": "string", "description": "Username for login"},
-            "password": {"type": "string", "description": "Password for login"},
+            "username": {"type": "string", "description": "登录用户名"},
+            "password": {"type": "string", "description": "登录密码"},
         },
         "required": ["action"],
     }
 
     def __init__(self, config: Config):
-        """Initialize browser tool.
+        """初始化浏览器工具。
 
         Args:
-            config: Nanobot configuration
+            config: Nanobot 配置
         """
         self.config = config
         self._session: BrowserSession | None = None
 
     async def execute(self, action: str, **kwargs: Any) -> str:
-        """Execute browser action.
+        """执行浏览器操作。
 
         Args:
-            action: Action to perform
-            **kwargs: Action-specific parameters
+            action: 要执行的操作
+            **kwargs: 操作特定的参数
 
         Returns:
-            Result as JSON string
+            JSON 格式的结果字符串
         """
         try:
             if action == "start":
@@ -96,7 +96,7 @@ class BrowserTool(Tool):
             elif action == "login":
                 return await self._login(**kwargs)
             else:
-                return json.dumps({"error": f"Unknown action: {action}"})
+                return json.dumps({"error": f"未知的操作: {action}"})
         except PermissionDenied as e:
             return json.dumps({"error": str(e), "errorType": "PermissionDenied"})
         except ElementNotFoundError as e:
@@ -107,11 +107,11 @@ class BrowserTool(Tool):
             return json.dumps({"error": str(e), "errorType": "Unknown"})
 
     async def _start_browser(self) -> str:
-        """Start browser session."""
+        """启动浏览器会话。"""
         if self._session and self._session.is_started:
-            return json.dumps({"status": "already_started", "message": "Browser already running"})
+            return json.dumps({"status": "already_started", "message": "浏览器已在运行"})
 
-        # Get profile directory for domain
+        # 获取域名的配置文件目录
         profile_dir = self.config.browser.profile_dir
 
         self._session = BrowserSession(
@@ -125,41 +125,41 @@ class BrowserTool(Tool):
 
         return json.dumps({
             "status": "started",
-            "message": "Browser started successfully",
+            "message": "浏览器启动成功",
             "headless": self.config.browser.headless,
         })
 
     async def _stop_browser(self) -> str:
-        """Stop browser session."""
+        """停止浏览器会话。"""
         if not self._session or not self._session.is_started:
-            return json.dumps({"status": "not_started", "message": "Browser not running"})
+            return json.dumps({"status": "not_started", "message": "浏览器未运行"})
 
         await self._session.stop()
         self._session = None
 
-        return json.dumps({"status": "stopped", "message": "Browser stopped successfully"})
+        return json.dumps({"status": "stopped", "message": "浏览器已成功停止"})
 
     async def _navigate(self, url: str, **kwargs: Any) -> str:
-        """Navigate to URL."""
+        """导航到 URL。"""
         self._ensure_session()
 
         await self._session.navigate(url)
 
         return json.dumps({
             "status": "success",
-            "message": f"Navigated to {url}",
+            "message": f"已导航到 {url}",
             "url": self._session.page.url,
         })
 
     async def _snapshot(self, **kwargs: Any) -> str:
-        """Take page snapshot."""
+        """截取页面快照。"""
         self._ensure_session()
 
         snapshot = PageSnapshot(self._session.page, timeout=self.config.browser.timeout)
         tree = await snapshot.get_tree()
         text = tree.to_text()
 
-        # Get interactive elements
+        # 获取可交互元素
         elements = await snapshot.get_interactive_elements()
 
         return json.dumps({
@@ -171,7 +171,7 @@ class BrowserTool(Tool):
         }, ensure_ascii=False)
 
     async def _click(self, locator: str, strategy: str = "auto", **kwargs: Any) -> str:
-        """Click element."""
+        """点击元素。"""
         self._ensure_session()
 
         actions = BrowserActions(self._session.page, timeout=self.config.browser.timeout)
@@ -179,12 +179,12 @@ class BrowserTool(Tool):
 
         return json.dumps({
             "status": "success",
-            "message": f"Clicked {locator}",
+            "message": f"已点击 {locator}",
             "url": self._session.page.url,
         })
 
     async def _type(self, locator: str, text: str, strategy: str = "auto", **kwargs: Any) -> str:
-        """Type text into element."""
+        """在元素中输入文本。"""
         self._ensure_session()
 
         actions = BrowserActions(self._session.page, timeout=self.config.browser.timeout)
@@ -192,7 +192,7 @@ class BrowserTool(Tool):
 
         return json.dumps({
             "status": "success",
-            "message": f"Typed text into {locator}",
+            "message": f"已在 {locator} 中输入文本",
         })
 
     async def _login(
@@ -203,10 +203,10 @@ class BrowserTool(Tool):
         password: str | None = None,
         **kwargs: Any,
     ) -> str:
-        """Perform login."""
+        """执行登录。"""
         self._ensure_session()
 
-        # Check if we have stored credentials
+        # 检查是否有存储的凭据
         if username is None or password is None:
             from nanobot.browser.credentials import CredentialManager
             mgr = CredentialManager(self.config.browser.credentials_path)
@@ -215,14 +215,14 @@ class BrowserTool(Tool):
             creds = mgr.list_credentials(domain)
 
             if creds and len(creds) == 1:
-                # Use stored credential
+                # 使用存储的凭据
                 cred = creds[0]
                 stored_password = mgr.get(cred.domain, cred.username)
                 if stored_password:
                     username = cred.username
                     password = stored_password
 
-        # Perform login
+        # 执行登录
         result: LoginResult = await perform_login(
             self._session,
             url,
@@ -239,6 +239,6 @@ class BrowserTool(Tool):
         })
 
     def _ensure_session(self) -> None:
-        """Ensure browser session is active."""
+        """确保浏览器会话处于活动状态。"""
         if not self._session or not self._session.is_started:
-            raise RuntimeError("Browser not started. Call browser action=start first.")
+            raise RuntimeError("浏览器未启动。请先调用 browser action=start。")

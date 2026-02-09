@@ -1,4 +1,4 @@
-"""Credential management using system keyring."""
+"""使用系统密钥环管理凭据。"""
 
 import json
 import stat
@@ -9,24 +9,24 @@ import keyring
 
 
 class Credential(NamedTuple):
-    """A website credential."""
+    """网站凭据。"""
 
     domain: str
     username: str
 
     @property
     def service_name(self) -> str:
-        """Get the keyring service name for this credential."""
+        """获取此凭据的密钥环服务名称。"""
         return f"nanobot-browser://{self.domain}"
 
 
 class CredentialManager:
-    """Manage login credentials using system keyring.
+    """使用系统密钥环管理登录凭据。
 
-    Credentials are stored in the OS keyring (macOS Keychain, Windows Credential Manager,
-    Linux Secret Service) for security. A backup file tracks which credentials exist.
+    凭据存储在 OS 密钥环(macOS Keychain、Windows 凭据管理器、
+    Linux Secret Service)中以确安全。备份文件跟踪存在的凭据。
 
-    Example:
+    示例:
         >>> manager = CredentialManager()
         >>> manager.save("mail.qq.com", "123456", "password123")
         >>> password = manager.get("mail.qq.com", "123456")
@@ -35,76 +35,76 @@ class CredentialManager:
     DEFAULT_CREDENTIALS_FILE = Path.home() / ".nanobot" / "credentials.json"
 
     def __init__(self, credentials_file: Path | str | None = None) -> None:
-        """Initialize credential manager.
+        """初始化凭据管理器。
 
         Args:
-            credentials_file: Path to credentials backup file (default: ~/.nanobot/credentials.json)
+            credentials_file: 凭据备份文件路径(默认: ~/.nanobot/credentials.json)
         """
         self._credentials_file = Path(credentials_file) if credentials_file else self.DEFAULT_CREDENTIALS_FILE
         self._ensure_credentials_file()
 
     def _ensure_credentials_file(self) -> None:
-        """Ensure credentials file exists with proper permissions."""
+        """确保凭据文件存在并具有正确的权限。"""
         if not self._credentials_file.exists():
             self._credentials_file.parent.mkdir(parents=True, exist_ok=True)
             self._write_credentials({})
         else:
-            # Ensure correct permissions (0600 - owner read/write only)
+            # 确保正确的权限(0600 - 仅所有者可读写)
             try:
                 self._credentials_file.chmod(0o600)
             except OSError:
-                # Some systems don't support chmod
+                # 某些系统不支持 chmod
                 pass
 
     def _read_credentials(self) -> dict[str, list[str]]:
-        """Read credentials backup file.
+        """读取凭据备份文件。
 
         Returns:
-            Dict mapping domain -> list of usernames
+            域 -> 用户名列表的字典
         """
         try:
             with open(self._credentials_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
-            # File corrupted, return empty
+            # 文件损坏,返回空
             return {}
 
     def _write_credentials(self, data: dict[str, list[str]]) -> None:
-        """Write credentials backup file.
+        """写入凭据备份文件。
 
         Args:
-            data: Dict mapping domain -> list of usernames
+            data: 域 -> 用户名列表的字典
         """
         with open(self._credentials_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, sort_keys=True)
 
-        # Set secure permissions
+        # 设置安全权限
         try:
             self._credentials_file.chmod(0o600)
         except OSError:
             pass
 
     def save(self, domain: str, username: str, password: str) -> None:
-        """Save a credential.
+        """保存凭据。
 
         Args:
-            domain: Domain name (e.g., "mail.qq.com")
-            username: Username
-            password: Password (will be stored in keyring)
+            domain: 域名(例如 "mail.qq.com")
+            username: 用户名
+            password: 密码(将存储在密钥环中)
 
-        Example:
+        示例:
             >>> manager.save("mail.qq.com", "123456", "password123")
         """
-        # Normalize domain
+        # 标准化域名
         from nanobot.browser.permissions import normalize_domain
         domain = normalize_domain(domain)
 
         credential = Credential(domain, username)
 
-        # Store in keyring
+        # 存储在密钥环中
         keyring.set_password(credential.service_name, username, password)
 
-        # Update backup file
+        # 更新备份文件
         creds = self._read_credentials()
         if domain not in creds:
             creds[domain] = []
@@ -114,47 +114,47 @@ class CredentialManager:
             self._write_credentials(creds)
 
     def get(self, domain: str, username: str) -> str | None:
-        """Retrieve a password from keyring.
+        """从密钥环中检索密码。
 
         Args:
-            domain: Domain name
-            username: Username
+            domain: 域名
+            username: 用户名
 
         Returns:
-            Password if found, None otherwise
+            如果找到则返回密码,否则返回 None
         """
-        # Normalize domain
+        # 标准化域名
         from nanobot.browser.permissions import normalize_domain
         domain = normalize_domain(domain)
 
         credential = Credential(domain, username)
 
-        # Get from keyring
+        # 从密钥环获取
         return keyring.get_password(credential.service_name, username)
 
     def delete(self, domain: str, username: str) -> bool:
-        """Delete a credential.
+        """删除凭据。
 
         Args:
-            domain: Domain name
-            username: Username
+            domain: 域名
+            username: 用户名
 
         Returns:
-            True if deleted, False if not found
+            如果删除则返回 True,如果未找到则返回 False
         """
-        # Normalize domain
+        # 标准化域名
         from nanobot.browser.permissions import normalize_domain
         domain = normalize_domain(domain)
 
         credential = Credential(domain, username)
 
-        # Delete from keyring
+        # 从密钥环删除
         try:
             keyring.delete_password(credential.service_name, username)
         except keyring.errors.PasswordDeleteError:
             return False
 
-        # Update backup file
+        # 更新备份文件
         creds = self._read_credentials()
         if domain in creds and username in creds[domain]:
             creds[domain].remove(username)
@@ -166,13 +166,13 @@ class CredentialManager:
         return False
 
     def list_credentials(self, domain: str | None = None) -> list[Credential]:
-        """List all saved credentials.
+        """列出所有保存的凭据。
 
         Args:
-            domain: Filter by domain (optional)
+            domain: 按域过滤(可选)
 
         Returns:
-            List of credentials
+            凭据列表
         """
         creds = self._read_credentials()
 
@@ -190,14 +190,14 @@ class CredentialManager:
         return result
 
     def has_credential(self, domain: str, username: str) -> bool:
-        """Check if a credential exists.
+        """检查凭据是否存在。
 
         Args:
-            domain: Domain name
-            username: Username
+            domain: 域名
+            username: 用户名
 
         Returns:
-            True if credential exists
+            如果凭据存在则返回 True
         """
         from nanobot.browser.permissions import normalize_domain
         domain = normalize_domain(domain)
@@ -207,13 +207,13 @@ class CredentialManager:
 
 
 def mask_password(password: str | None) -> str:
-    """Mask password for logging (don't log actual passwords).
+    """掩码密码用于日志记录(不记录实际密码)。
 
     Args:
-        password: Password to mask
+        password: 要掩码的密码
 
     Returns:
-        Masked string (e.g., "********")
+        掩码字符串(例如 "********")
     """
     if password is None:
         return "<none>"

@@ -8,7 +8,14 @@
       "Bash(git restore:*)",
       "mcp__web-search-prime__webSearchPrime",
       "mcp__zread__get_repo_structure",
-      "mcp__web-reader__webReader"
+      "mcp__web-reader__webReader",
+      "Bash(openspec:*)",
+      "Bash(powershell:*)",
+      "Bash(dir \"e:\\\\StudySpace\\\\AI\\\\AI Agent\\\\nanobot\\\\nanobot\\\\browser\")",
+      "Bash(python:*)",
+      "Bash(playwright install:*)",
+      "Bash(conda run:*)",
+      "Bash(~/.conda/envs/langchainenv/python.exe:*)"
     ]
   }
 }

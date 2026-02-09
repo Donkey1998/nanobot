@@ -110,6 +110,17 @@ class ToolsConfig(BaseModel):
     restrict_to_workspace: bool = False  # If true, restrict all tool access to workspace directory
 
 
+class BrowserConfig(BaseModel):
+    """Browser automation configuration."""
+    enabled: bool = False  # Enable browser automation features
+    headless: bool = True  # Run browser in headless mode (no GUI)
+    timeout: int = 30000  # Default timeout for browser operations (milliseconds)
+    profile_dir: str | None = None  # Custom path for browser profiles (default: ~/.nanobot/browser-profiles/)
+    credentials_path: str | None = None  # Custom path for credentials file (default: ~/.nanobot/credentials.json)
+    allowed_domains: list[str] = Field(default_factory=list)  # Whitelist of allowed domains (e.g., ["*.example.com", "mail.qq.com"])
+    auto_login_domains: list[str] = Field(default_factory=list)  # Domains to auto-login (e.g., ["mail.qq.com"])
+
+
 class Config(BaseSettings):
     """Root configuration for nanobot."""
     agents: AgentsConfig = Field(default_factory=AgentsConfig)
@@ -117,6 +128,7 @@ class Config(BaseSettings):
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
     gateway: GatewayConfig = Field(default_factory=GatewayConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
+    browser: BrowserConfig = Field(default_factory=BrowserConfig)
     
     @property
     def workspace_path(self) -> Path:

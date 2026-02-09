@@ -54,6 +54,7 @@ class AgentLoop:
         exec_config: "ExecToolConfig | None" = None,
         cron_service: "CronService | None" = None,
         restrict_to_workspace: bool = False,
+        config: "Config | None" = None,
     ):
         from nanobot.config.schema import ExecToolConfig
         from nanobot.cron.service import CronService
@@ -69,6 +70,7 @@ class AgentLoop:
         self.exec_config = exec_config or ExecToolConfig()
         self.cron_service = cron_service
         self.restrict_to_workspace = restrict_to_workspace
+        self.config = config  # Store full config for tool initialization
 
         # 上下文构建器：负责组装发送给 LLM 的消息（包含系统提示、历史、当前消息等）
         self.context = ContextBuilder(workspace)
@@ -130,6 +132,14 @@ class AgentLoop:
         # Cron tool (for scheduling)
         if self.cron_service:
             self.tools.register(CronTool(self.cron_service))
+
+        # Browser tool (for web automation, requires explicit enable)
+        if self.config and self.config.browser.enabled:
+            try:
+                from nanobot.agent.tools.browser import BrowserTool
+                self.tools.register(BrowserTool(self.config))
+            except ImportError as e:
+                logger.warning(f"Browser tool enabled but dependencies not available: {e}")
     
     async def run(self) -> None:
         """运行 Agent 循环，处理来自总线的消息。"""

@@ -51,7 +51,6 @@ class ReadFileTool(Tool):
             
             content = file_path.read_text(encoding="utf-8")
             return content
-<<<<<<< HEAD
         except PermissionError as e:
             return f"错误：权限被拒绝：{e}"
         except Exception as e:
@@ -94,15 +93,9 @@ class WriteFileTool(Tool):
             file_path = _resolve_path(path, self._allowed_dir)
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(content, encoding="utf-8")
-<<<<<<< HEAD
             return f"成功写入 {len(content)} 字节到 {path}"
         except PermissionError:
             return f"错误：权限被拒绝：{path}"
-=======
-            return f"Successfully wrote {len(content)} bytes to {path}"
-        except PermissionError as e:
-            return f"Error: {e}"
->>>>>>> main
         except Exception as e:
             return f"写入文件错误：{str(e)}"
 
@@ -160,16 +153,10 @@ class EditFileTool(Tool):
             
             new_content = content.replace(old_text, new_text, 1)
             file_path.write_text(new_content, encoding="utf-8")
-            
-<<<<<<< HEAD
+
             return f"成功编辑 {path}"
         except PermissionError:
             return f"错误：权限被拒绝：{path}"
-=======
-            return f"Successfully edited {path}"
-        except PermissionError as e:
-            return f"Error: {e}"
->>>>>>> main
         except Exception as e:
             return f"编辑文件错误：{str(e)}"
 
@@ -216,9 +203,8 @@ class ListDirTool(Tool):
             
             if not items:
                 return f"目录 {path} 为空"
-            
+
             return "\n".join(items)
-<<<<<<< HEAD
         except PermissionError as e:
             return f"错误：权限被拒绝：{e}"
         except Exception as e:

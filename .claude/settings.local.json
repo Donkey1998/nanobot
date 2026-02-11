@@ -15,7 +15,9 @@
       "Bash(python:*)",
       "Bash(playwright install:*)",
       "Bash(conda run:*)",
-      "Bash(~/.conda/envs/langchainenv/python.exe:*)"
+      "Bash(~/.conda/envs/langchainenv/python.exe:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)"
     ]
   }
 }

@@ -25,7 +25,7 @@
 | 模块 | 文档 | 说明 | 优先级 |
 |------|------|------|--------|
 | **[Agent 循环](agent-loop.md)** | [agent/loop.py](nanobot/agent/loop.py) | ReAct 模式的核心处理引擎 | ⭐⭐⭐ |
-| **[消息总线](message-bus.md)** | [bus/queue.py](nanobot/bus/queue.py) | 异步消息传递机制 | ⭐⭐⭐ |
+| **[消息总线](message-bus.md)** | [bus/queue.py](nanobot/bus/queue.py) | 异步消息传递机制（`dispatch_outbound()` 为计划中功能） | ⭐⭐⭐ |
 | **[LLM 提供商](llm-provider.md)** | [providers/litellm_provider.py](nanobot/providers/litellm_provider.py) | 统一 LLM 接口 | ⭐⭐⭐ |
 | **[上下文构建器](context-builder.md)** | [agent/context.py](nanobot/agent/context.py) | LLM 上下文组装 | ⭐⭐ |
 
@@ -104,21 +104,21 @@ nanobot/
 
 ### 初学者路径
 
-1. **第 1 步**: 阅读 [Agent 循环](agent-loop.md) 了解系统核心
-2. **第 2 步**: 阅读 [消息总线](message-bus.md) 理解通信机制
-3. **第 3 步**: 阅读 [工具系统](tools-system.md) 学习如何扩展能力
+1. **第 1 步**: 阅读 [Agent 循环](./modules/agent-loop.md) 了解系统核心
+2. **第 2 步**: 阅读 [消息总线](./modules/message-bus.md) 理解通信机制
+3. **第 3 步**: 阅读 [工具系统](./modules/tools-system.md) 学习如何扩展能力
 
 ### 进阶开发者路径
 
-1. **第 1 步**: 阅读 [上下文构建器](context-builder.md) 深入理解上下文管理
-2. **第 2 步**: 阅读 [子 Agent 管理](subagent-manager.md) 学习并行处理
-3. **第 3 步**: 阅读 [浏览器自动化](browser-automation.md) 掌握网页操作
+1. **第 1 步**: 阅读 [上下文构建器](./modules/context-builder.md) 深入理解上下文管理
+2. **第 2 步**: 阅读 [子 Agent 管理](./modules/subagent-manager.md) 学习并行处理
+3. **第 3 步**: 阅读 [浏览器自动化](./modules/browser-automation.md) 掌握网页操作
 
 ### 系统集成者路径
 
-1. **第 1 步**: 阅读 [配置系统](config-system.md) 了解配置管理
-2. **第 2 步**: 阅读 [渠道管理器](channel-manager.md) 学习平台集成
-3. **第 3 步**: 阅读 [LLM 提供商](llm-provider.md) 理解多提供商支持
+1. **第 1 步**: 阅读 [配置系统](./modules/config-system.md) 了解配置管理
+2. **第 2 步**: 阅读 [渠道管理器](./modules/channel-manager.md) 学习平台集成
+3. **第 3 步**: 阅读 [LLM 提供商](./modules/llm-provider.md) 理解多提供商支持
 
 ---
 

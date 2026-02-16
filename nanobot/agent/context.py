@@ -1,4 +1,4 @@
-"""用于组装 Agent 提示的上下文构建器。"""
+-"""用于组装 Agent 提示的上下文构建器。"""
 
 import base64
 import mimetypes

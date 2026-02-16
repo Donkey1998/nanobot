@@ -15,7 +15,11 @@
 - **消息入站**: 从聊天渠道接收用户消息
 - **消息出站**: 将 Agent 响应发送回聊天渠道
 - **异步解耦**: 允许渠道和 Agent 并发运行
-- **消息分发**: 支持订阅模式路由出站消息
+- **消息分发**: 提供订阅模式接口（计划中功能，当前使用 `ChannelManager._dispatch_outbound()` 实现）
+
+### 实现说明
+
+> 当前项目中，出站消息的分发由 `ChannelManager._dispatch_outbound()` 负责，而非 `MessageBus.dispatch_outbound()`。后者是一个替代实现，使用回调订阅模式，目前未被使用。详见 [§3.4 当前使用的实现](#34-当前使用的实现)。
 
 ### 设计模式
 
@@ -107,7 +111,8 @@ def subscribe_outbound(
                     │  │                          │   │                 │
                     │  └──────────────────────────┘   │                 │
                     │                                  │                 │
-                    │  dispatch_outbound() ────────────┼─────────────────┤
+                    │  ~~dispatch_outbound()~~        │                 │
+                    │  ⚠️ 计划中的功能               │                 │
                     │                                  │                 │
                     └──────────────────────────────────┘                 │
                                                                    │
@@ -116,6 +121,8 @@ def subscribe_outbound(
 │  Channel      │                                           │  Callback      │
 └───────────────┘                                           └────────────────┘
 ```
+
+> **注**: 实际项目中，出站消息由 `ChannelManager._dispatch_outbound()` 分发，而非上述 `dispatch_outbound()` 方法。详见 [§3.4 当前使用的实现](#34-当前使用的实现)。
 
 ### 3.2 消息类型
 
@@ -149,7 +156,11 @@ class OutboundMessage:
 
 ### 3.3 出站分发器
 
-`dispatch_outbound()` 方法作为后台任务运行，将出站消息路由到订阅的渠道回调。
+> **⚠️ 状态**: 计划中的功能 / 替代实现
+>
+> 当前项目中未使用此方法。实际使用的是 `ChannelManager._dispatch_outbound()`，详见 [渠道管理器模块](channel-manager.md)。
+
+`dispatch_outbound()` 方法设计为后台任务运行，将出站消息路由到订阅的渠道回调。
 
 **代码位置**: [queue.py:51-67](../../../nanobot/bus/queue.py#L51-L67)
 
@@ -169,6 +180,41 @@ async def dispatch_outbound(self) -> None:
         except asyncio.TimeoutError:
             continue
 ```
+
+### 3.4 当前使用的实现
+
+**实际实现**: [ChannelManager._dispatch_outbound()](../../../nanobot/channels/manager.py#L119-L142)
+
+`ChannelManager` 使用自己的分发器实现，直接将出站消息路由到已注册的渠道实例：
+
+```python
+async def _dispatch_outbound(self) -> None:
+    """将出站消息分发到相应的渠道。"""
+    while True:
+        try:
+            msg = await asyncio.wait_for(
+                self.bus.consume_outbound(),
+                timeout=1.0
+            )
+
+            channel = self.channels.get(msg.channel)
+            if channel:
+                await channel.send(msg)
+        except asyncio.TimeoutError:
+            continue
+```
+
+**两种实现的对比**:
+
+| 特性 | MessageBus.dispatch_outbound() | ChannelManager._dispatch_outbound() |
+|------|-------------------------------|-------------------------------------|
+| 状态 | ⚠️ 计划中 / 替代方案 | ✅ 当前使用 |
+| 分发机制 | 回调订阅模式 | 直接调用渠道方法 |
+| 消费方式 | `self.outbound.get()` | `self.bus.consume_outbound()` |
+| 灵活性 | 支持多个订阅者 | 单一分发目标 |
+| 启动位置 | 需要手动启动 | `ChannelManager.start_all()` 自动启动 |
+
+
 
 ---
 
@@ -244,13 +290,15 @@ bus.subscribe_outbound("telegram", handle_telegram)
 
 ### 4.5 分发器方法
 
+> **⚠️ 注意**: 以下方法为计划中的功能，当前项目中未实际使用。项目实际使用 `ChannelManager._dispatch_outbound()` 进行出站消息分发。
+
 #### `async def dispatch_outbound(self) -> None`
 
-启动出站消息分发循环。
+启动出站消息分发循环（订阅者模式实现）。
 
 **代码位置**: [queue.py:51-67](../../../nanobot/bus/queue.py#L51-L67)
 
-**注意**: 此方法应在后台任务中运行。
+**说明**: 此方法提供了基于回调订阅的替代实现方式，与 `ChannelManager._dispatch_outbound()` 的直接分发方式不同。
 
 #### `def stop(self) -> None`
 
@@ -319,6 +367,8 @@ asyncio.run(main())
 ```
 
 ### 5.2 使用订阅者模式
+
+> **⚠️ 注意**: 以下示例展示的是 `dispatch_outbound()` 方法的用法，该方法为计划中的功能，当前项目中未实际使用。
 
 ```python
 import asyncio
@@ -470,7 +520,7 @@ class MessageBus:
 ### 依赖模块
 
 - [nanobot/agent/loop.py](../../../nanobot/agent/loop.py) - 消息的主要消费者
-- [nanobot/channels/manager.py](../../../nanobot/channels/manager.py) - 消息的生产者和分发者
+- [nanobot/channels/manager.py](../../../nanobot/channels/manager.py) - 消息的生产者和实际分发者（使用 `_dispatch_outbound()` 方法）
 
 ### 相关文档
 
